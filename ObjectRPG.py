@@ -7,8 +7,8 @@ import pickle
 
 #TODO
 
-weapons = {"Great Sword":40, "Battle Axe":50, "Iron Dagger":70, "Rod":50, "Staff":200}
-armors = {"Chain Mail":50, "Plate Mail":100, "Magic Cloak":75, "Wizard Robe":200,"Shadow Cloak":150}
+weapons = {"Rusty Sword":20, "Dagger":15, "Wand":10, "Great Sword":40, "Battle Axe":50, "Iron Dagger":70, "Rod":50, "Staff":200}
+armors = {"Leather Tunic":15, "Robe":10, "Chain Mail":50, "Plate Mail":100, "Magic Cloak":75, "Wizard Robe":200,"Shadow Cloak":150}
 accs = {"Ring":75, "Magic Ring":125, "Mystic Ring":200, "Warrior Ring":100, "Iron Ring":100, "Quick Ring":50, "Agile Ring":100, "Lucky Ring":100, "Fortune Ring":200, "Ranger Ring":200}
 potions = {"Potion":10}
 nothing = {"None"}
@@ -21,6 +21,7 @@ sortedbattlemembers = []
 battleactionqueue = []
 battletargetqueue = []
 baq = []
+invtosell = []
 
 class Player:
     def __init__(self, name, charclass):
@@ -314,11 +315,11 @@ class Goblin:
         self.hp = self.mHP
         self.mMP = 0
         self.mp = self.mMP
-        self.attack = 50
+        self.attack = 5
         self.defense = 1
         self.wisdom = 0
         self.resistance = 1
-        self.agility = 30
+        self.agility = 3
         self.luck = 1
         self.goldgain = 10
         self.expgain = 5
@@ -704,7 +705,12 @@ def equip1(player):
         option = input(" ")
         equip1(currentplayer)
     elif option in currentplayer.weapon:
-        currentplayer.curweapon = option
+        if currentplayer.curweapon == "None":
+            currentplayer.curweapon = option
+        else:
+            currentplayer.weapon.append(currentplayer.curweapon)
+            currentplayer.curweapon = option
+        currentplayer.weapon.remove(option)
         print("You have equipped %s." % option)
         option = input(" ")
         equip1(currentplayer)
@@ -714,7 +720,12 @@ def equip1(player):
         option = input(" ")
         equip1(currentplayer)
     elif option in currentplayer.armor:
-        currentplayer.curarmor = option
+        if currentplayer.curarmor == "None":
+            currentplayer.curarmor = option
+        else:
+            currentplayer.armor.append(currentplayer.curarmor)
+            currentplayer.curarmor = option
+        currentplayer.armor.remove(option)
         print("You have equipped %s." % option)
         option = input(" ")
         equip1(currentplayer)
@@ -724,7 +735,12 @@ def equip1(player):
         option = input(" ")
         equip1(currentplayer)
     elif option in currentplayer.acc:
-        currentplayer.curacc = option
+        if currentplayer.curacc == "None":
+            currentplayer.curacc = option
+        else:
+            currentplayer.acc.append(currentplayer.curacc)
+            currentplayer.curacc = option
+        currentplayer.acc.remove(option)
         print("You have equipped %s." % option)
         option = input(" ")
         equip1(currentplayer)
@@ -1158,7 +1174,7 @@ def playerattack(player, targetindex):
     enemy = enemyparty[target]
     PAttack = math.floor((random.randint(math.floor(currentplayer.attack / 2), currentplayer.attack)) * (10 / (10 + enemy.defense)))
     if PAttack == currentplayer.attack / 2:
-        print("%s attack on %s misses!" % (currentplayer.name, enemy.name))
+        print("%s's attack on %s misses!" % (currentplayer.name, enemy.name))
     else:
         #check for crit
         crit = round(currentplayer.luck / 5)
@@ -1169,7 +1185,7 @@ def playerattack(player, targetindex):
         print("%s deals %i damage to %s!" % (currentplayer.name, PAttack, enemy.name))
         option = input(" ")
         if enemy.hp <= 0:
-            print("%s defeated!" % enemy.name)
+            print("%s defeated!\n" % enemy.name)
             enemy.hp = enemy.mHP
             defeatedenemyparty.append(enemy)
             enemyparty.remove(enemy)
@@ -1188,7 +1204,7 @@ def enemyattack(enemy, targetindex):
     playertarget = battlepartymembers[target]
     EAttack = math.floor((random.randint(math.floor(enemy.attack / 2), enemy.attack)) * (10 / (10 + playertarget.defense)))
     if EAttack == enemy.attack / 2:
-        print("%s attack on %s missed!" % (enemy.name, playertarget.name))
+        print("%s's attack on %s missed!" % (enemy.name, playertarget.name))
     else:
         #check for crit
         crit = round(enemy.luck / 5)
@@ -1199,7 +1215,7 @@ def enemyattack(enemy, targetindex):
         print("%s deals %i damage to %s!" % (enemy.name, EAttack, playertarget.name))
         option = input(" ")
         if playertarget.hp <= 0:
-            print("%s was slain!" % playertarget.name)
+            print("%s was slain!\n" % playertarget.name)
             battlepartymembers.remove(playertarget)
             battlemembers.remove(playertarget)
             dead()
@@ -1231,7 +1247,7 @@ def magicattack(player, targetindex):
             print("%s's fireball deals %i damage to %s!" % (currentplayer.name, PAttack, enemy.name))
             option = input(" ")
             if enemy.hp <= 0:
-                print("%s defeated!" % enemy.name)
+                print("%s defeated!\n" % enemy.name)
                 enemy.hp = enemy.mHP
                 defeatedenemyparty.append(enemy)
                 enemyparty.remove(enemy)
@@ -1261,7 +1277,7 @@ def enemymagicattack(enemy, targetindex):
         print("The fireball of %s deals %i damage to %s!" % (enemy.name, EAttack, playertarget.name))
         option = input(" ")
         if playertarget.hp <= 0:
-            print("%s was slain!" % playertarget.name)
+            print("%s was slain!\n" % playertarget.name)
             battlepartymembers.remove(playertarget)
             battlemembers.remove(playertarget)
             dead()
@@ -1448,9 +1464,39 @@ def purchaseforwho(itembought):
     purchaseforwho(item)
     #store()
 
+def sellforwho():
+    print("Who will sell?")
+    for char in currentparty:
+        print(char.name)
+    option = input(">")
+    for char in currentparty:
+        if option == char.name:
+            currentplayer = char
+            print(currentplayer.name)
+            return currentplayer
+    print("Please specify a valid party member.")
+    print("You said: %s" % option)
+    sellforwho()
+
 def store():
     os.system("cls")
     print("Welcome to the shop!")
+    print("Current gold: %i" % PlayerIG.gold)
+    print("1.) Buy")
+    print("2.) Sell")
+    print("b.) Back")
+    option = input(">")
+    if option == "1":
+        storebuy()
+    elif option == "2":
+        storesell()
+    elif option == "b" or option == "back":
+        start1()
+    else:
+        print("Please enter a valid entry.")
+
+def storebuy():
+    os.system("cls")
     print("Current gold: %i" %PlayerIG.gold)
     print("What would you like to buy?")
     itemtotal = len(weapons) + len(armors) + len(potions) + len(accs)
@@ -1475,18 +1521,16 @@ def store():
         if PlayerIG.gold >= weapons[option]:
             os.system("cls")
             player = purchaseforwho(option)
-            print(player)
-            print("Name: %s" % player.name)
             player.weapon.append(option)
             print("You have purchased %s" % option)
             PlayerIG.gold -= weapons[option]
             option = input(" ")
-            store()
+            storebuy()
         else:
             os.system("cls")
             print("You don't have enough gold...")
             option = input(" ")
-            store()
+            storebuy()
     elif option in potions:
         if PlayerIG.gold >= potions[option]:
             os.system("cls")
@@ -1494,12 +1538,12 @@ def store():
             PlayerIG.potions += 1
             print("You have purchased a potion.")
             option = input(" ")
-            store()
+            storebuy()
         else:
             os.system("cls")
             print("You don't have enough gold...")
             option = input(" ")
-            store()
+            storebuy()
     elif option in armors:
         if PlayerIG.gold >= armors[option]:
             os.system("cls")
@@ -1508,7 +1552,7 @@ def store():
             player.armor.append(option)
             print("You have purchased %s" % option)
             option = input(" ")
-            store()
+            storebuy()
     elif option in accs:
         if PlayerIG.gold >= accs[option]:
             os.system("cls")
@@ -1517,18 +1561,66 @@ def store():
             player.acc.append(option)
             print("You have purchased %s" % option)
             option = input(" ")
-            store()
+            storebuy()
         else:
             os.system("cls")
             print("You don't have enough gold...")
             option = input(" ")
-            store()
+            storebuy()
     elif option == "back" or "b":
-        start1()
+        store()
     else:
         os.system("cls")
         print("That item does not exist!")
         option = input(" ")
+        storebuy()
+
+def storesell():
+    os.system("cls")
+    invtosell.clear()
+    print("Current gold: %i" %PlayerIG.gold)
+    char = sellforwho()
+    storesell2(char)
+
+def storesell2(character):
+    os.system("cls")
+    char = character
+    print("Current gold: %i" %PlayerIG.gold)
+    print("What do you want to sell?")
+    for item in char.weapon:
+        print("%s - %i" % (item, 3*weapons[item]/4))
+        invtosell.append(item)
+    for item in char.armor:
+        print("%s - %i" % (item, 3*armors[item]/4))
+        invtosell.append(item)
+    for item in char.acc:
+        print("%s - %i" % (item, 3*accs[item]/4))
+        invtosell.append(item)
+    print("b.) back")
+    option = input(">")
+    if option in invtosell:
+        if option in weapons:
+            value = 3*weapons[option]/4
+        if option in armors:
+            value = 3*armors[option]/4
+        if option in accs:
+            value = 3*accs[option]/4
+        print("Thank you very much!")
+        print("You have sold the %s for %i gold!" % (option, value))
+        PlayerIG.gold += value
+
+        if option in char.weapon:
+            char.weapon.remove(option)
+        if option in char.armor:
+            char.armor.remove(option)
+        if option in char.acc:
+            char.acc.remove(option)
+        storesell2(char)
+    elif option == "b" or option == "back":
         store()
+    else:
+        print("%s does not have a %s to sell." % (char.name, option))
+        storesell2(char)
+
 
 main()
