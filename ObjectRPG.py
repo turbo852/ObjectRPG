@@ -512,10 +512,11 @@ def start1():
         start1()
 
 def status():
-
+    print("********")
     print("Gold: %i" % PlayerIG.gold)
     print("Potions: %i\n" % PlayerIG.potions)
     for char in currentparty:
+        print("********")
         print("Name: %s" % char.name)
         print("Level: %i" % char.level)
         print("Class: %s" % char.charclass)
@@ -530,6 +531,7 @@ def status():
         print("Current Weapon: %s" % char.curweapon)
         print("Current Armor: %s" % char.curarmor)
         print("Current Acc: %s" % char.curacc)
+        print("********")
         option = input(" ")
     start1()
 
@@ -538,7 +540,9 @@ def savegame():
     with open("savefile", "wb") as f:
         pickle.dump(PlayerIG, f)
         pickle.dump(currentparty, f)
+        print("********")
         print("\nGame has been saved!\n")
+        print("********")
     option = input(" ")
     start1()
 
@@ -550,11 +554,15 @@ def loadgame():
             global currentparty
             PlayerIG = pickle.load(f)
             currentparty = pickle.load(f)
+        print("********")
         print("Save has been loaded...")
+        print("********")
         start1()
         option = input(" ")
     else:
+        print("********")
         print("You have no save file for this game.")
+        print("********")
         option =  input(" ")
         main()
 
@@ -752,7 +760,7 @@ def prefight():
     #establish enemy party
     global enemy
     enemynum = random.randint(1, 100)
-    print(enemynum)
+    #print(enemynum)
     if enemynum <= 20:
         #enemy = GoblinIG
         GoblinIGA = Goblin("Goblin A")
@@ -799,12 +807,13 @@ def prefight():
     #sort battle participants by agility for turn order
     battlemembers.sort(key=lambda x: x.agility, reverse=True)
     #Show battle participants
+    os.system("cls")
     for char in battlepartymembers:
         print("%s" % char.name)
     print("vs")
     for monster in enemyparty:
         print("%s" % monster.name)
-    print("Potions: %i\n" % PlayerIG.potions)
+    print("\nPotions: %i\n" % PlayerIG.potions)
     print("1.) Fight")
     print("2.) Run")
     option = input(">")
@@ -848,26 +857,25 @@ def fight():
     for char in battlemembers:
         if char.chartype == "enemy":
             BattleActionA = BattleActionClass(char.name)
-            print("Battle Class: %s" % BattleActionA.name)
+            #print("Battle Class: %s" % BattleActionA.name)
             enemyaction = enemyactionselector(char)
             BattleActionA.action = enemyaction
-            print("Battle Action: %s" % BattleActionA.action)
-            battleactionqueue.append(enemyaction)
+            #print("Battle Action: %s" % BattleActionA.action)
+            #battleactionqueue.append(enemyaction)
             enemytarget = getplayertargetforenemy()
             BattleActionA.target = enemytarget
-            print("Battle Target: %s" % BattleActionA.target)
-            print(battlepartymembers[BattleActionA.target].name)
-            pause = input(" ")
-            battletargetqueue.append(enemytarget)
+            #print("Battle Target: %s" % BattleActionA.target)
+            #print(battlepartymembers[BattleActionA.target].name)
+            #pause = input(" ")
+            #battletargetqueue.append(enemytarget)
 
             baq.append(BattleActionA)
             
             print("********")
             print("%s's turn!" % BattleActionA.name)
-            print("Added enemy: %s" % BattleActionA.name)
-            print("Battle Action: %s" % BattleActionA.action)
-            print("Battle Target: %s" % BattleActionA.target)
-            print(battlepartymembers[BattleActionA.target].name)
+            #print("Added enemy: %s" % BattleActionA.name)
+            print("Action: %s" % BattleActionA.action)
+            print("Target: %s: %s" % (BattleActionA.target, battlepartymembers[BattleActionA.target].name))
         else:
             BattleActionA = BattleActionClass(char.name)
             BattleActionA.charclass = char.charclass
@@ -912,87 +920,87 @@ def fight():
             if option == 1:
                 #attack("physical")
                 playeraction = "physical"
-                battleactionqueue.append(playeraction)
+                #battleactionqueue.append(playeraction)
                 target = getenemytarget()
-                battletargetqueue.append(target)
+                #battletargetqueue.append(target)
                 
                 
-                print("Battle Class: %s" % BattleActionA.name)
+                #print("Battle Class: %s" % BattleActionA.name)
                 BattleActionA.action = playeraction
-                print("Battle Action: %s" % BattleActionA.action)
+                #print("Battle Action: %s" % BattleActionA.action)
                 BattleActionA.target = target
-                print("Battle Target: %s" % BattleActionA.target)
-                print(enemyparty[BattleActionA.target].name)
-                pause = input(" ")
+                #print("Battle Target: %s" % BattleActionA.target)
+                #print(enemyparty[BattleActionA.target].name)
+                #pause = input(" ")
 
                 baq.append(BattleActionA)
                 
-                print("Added character: %s" % BattleActionA.name)
-                print("Action: %s" % BattleActionA.action)
-                print("Target: %s" % BattleActionA.target)
-                print(enemyparty[BattleActionA.target].name)
+                #print("Added character: %s" % BattleActionA.name)
+                #print("Action: %s" % BattleActionA.action)
+                #print("Target: %s" % BattleActionA.target)
+                #print(enemyparty[BattleActionA.target].name)
             elif option == 2:
                 playeraction = "magic"
 
-                battleactionqueue.append(playeraction)
+                #battleactionqueue.append(playeraction)
                 target = getenemytarget()
-                battletargetqueue.append(target)
+                #battletargetqueue.append(target)
 
                 BattleActionA = BattleActionClass(char.name)
-                print("Battle Class: %s" % BattleActionA.name)
+                #print("Battle Class: %s" % BattleActionA.name)
                 BattleActionA.action = playeraction
-                print("Battle Action: %s" % BattleActionA.action)
+                #print("Battle Action: %s" % BattleActionA.action)
                 BattleActionA.target = target
-                print("Battle Target: %s" % BattleActionA.target)
-                print(enemyparty[BattleActionA.target].name)
-                pause = input(" ")
+                #print("Battle Target: %s" % BattleActionA.target)
+                #print(enemyparty[BattleActionA.target].name)
+                #pause = input(" ")
 
                 baq.append(BattleActionA)
                 
-                print("Added character: %s" % char.name)
-                print("Action: %s" % playeraction)
-                print("Target: %s" % target)
+                #print("Added character: %s" % char.name)
+                #print("Action: %s" % playeraction)
+                #print("Target: %s" % target)
                 #print(enemyparty[target].name)
             elif option == 3:
                 playeraction = "drink"
-                battleactionqueue.append(playeraction)
+                #battleactionqueue.append(playeraction)
                 target = getplayertarget()
-                battletargetqueue.append(target)
+                #battletargetqueue.append(target)
 
                 BattleActionA = BattleActionClass(char.name)
-                print("Battle Class: %s" % BattleActionA.name)
+                #print("Battle Class: %s" % BattleActionA.name)
                 BattleActionA.action = playeraction
-                print("Battle Action: %s" % BattleActionA.action)
+                #print("Battle Action: %s" % BattleActionA.action)
                 BattleActionA.target = target
-                print("Battle Target index: %s" % BattleActionA.target)
+                #print("Battle Target index: %s" % BattleActionA.target)
                 #print(enemyparty[BattleActionA.target].name)
-                pause = input(" ")
+                #pause = input(" ")
 
                 baq.append(BattleActionA)
                 
-                print("Added character: %s" % char.name)
-                print("Action: %s" % playeraction)
-                print("Target: %s" % target)
-                print(currentparty[target].name)
+                #print("Added character: %s" % char.name)
+                #print("Action: %s" % playeraction)
+                #print("Target: %s" % target)
+                #print(currentparty[target].name)
             elif option == 4:
                 playeraction = "run"
-                battleactionqueue.append(playeraction)
+                #battleactionqueue.append(playeraction)
                 target = 0
-                battletargetqueue.append(target)
+                #battletargetqueue.append(target)
 
                 BattleActionA = BattleActionClass(char.name)
-                print("Battle Class: %s" % BattleActionA.name)
+                #print("Battle Class: %s" % BattleActionA.name)
                 BattleActionA.action = playeraction
-                print("Battle Action: %s" % BattleActionA.action)
+                #print("Battle Action: %s" % BattleActionA.action)
                 BattleActionA.target = target
-                print("Battle Target index: %s" % BattleActionA.target)
+                #print("Battle Target index: %s" % BattleActionA.target)
                 #print(enemyparty[BattleActionA.target].name)
-                pause = input(" ")
+                #pause = input(" ")
 
                 baq.append(BattleActionA)
                 
-                print("Added character: %s" % char.name)
-                print("Action: %s" % playeraction)
+                #print("Added character: %s" % char.name)
+                #print("Action: %s" % playeraction)
                 #else:
                     #fight()
     runbattleactionqueue()
@@ -1002,13 +1010,13 @@ def runbattleactionqueue():
     i = 0
     j = 0
     print("\nTurn start!")
-    for n in range(len(battlemembers)):
-        print(battlemembers[n].name)
-    for n in range(len(battleactionqueue)):
-        print(battleactionqueue[n])
-    for n in range(len(battletargetqueue)):
-        print(battletargetqueue[n])
-    option = input(" ")
+    #for n in range(len(battlemembers)):
+    #    print(battlemembers[n].name)
+    #for n in range(len(battleactionqueue)):
+    #    print(battleactionqueue[n])
+    #for n in range(len(battletargetqueue)):
+    #    print(battletargetqueue[n])
+    #option = input(" ")
 
     for n in range(len(baq)):
         print("Name: %s Action: %s Target index: %s" % (baq[n].name, baq[n].action, baq[n].target))
@@ -1018,12 +1026,12 @@ def runbattleactionqueue():
         if battlemembers[i].chartype == "enemy":
             print(battlemembers[i].name + "'s turn!")
             enemy = battlemembers[i]
-            choice = battleactionqueue[i]
-            enemytarget = battletargetqueue[i]
+            #choice = battleactionqueue[i]
+            #enemytarget = battletargetqueue[i]
             choice1 = baq[i].action
-            print("Enemy choice baq: %s" % choice1)
+            #print("Enemy choice baq: %s" % choice1)
             enemytarget1 = baq[i].target
-            print("Enemy target baq %i:" % enemytarget1)
+            #print("Enemy target baq %i:" % enemytarget1)
             #check if target still exists:
             if enemytarget1 > len(battlepartymembers):
                 enemytarget1 = 0
@@ -1035,12 +1043,12 @@ def runbattleactionqueue():
         elif battlemembers[i].chartype == "player":
             print(battlemembers[i].name + "'s turn!")
             player = battlemembers[i]
-            action = battleactionqueue[i]
-            playertarget = battletargetqueue[i]
+            #action = battleactionqueue[i]
+            #playertarget = battletargetqueue[i]
             action1 = baq[i].action
-            print("Player action baq: %s" % action1)
+            #print("Player action baq: %s" % action1)
             playertarget1 = baq[i].target
-            print("Player target baq %i:" % playertarget1)
+            #print("Player target baq %i:" % playertarget1)
             #check if target still exists:
             if playertarget1 > len(enemyparty):
                 playertarget1 = 0
@@ -1080,8 +1088,8 @@ def runbattleactionqueue():
         option = input(" ")
         #else:
             #print("Done\n")
-    battleactionqueue.clear()
-    battletargetqueue.clear()
+    #battleactionqueue.clear()
+    #battletargetqueue.clear()
     baq.clear()
     fight()
             
@@ -1124,7 +1132,7 @@ def getenemytarget():
                 print("Please enter a number for the monster you want to attack.")
     else:
         target = 0
-    print("Target index: %d" % target)
+    #print("Target index: %d" % target)
     return target
 
 def getplayertarget():
@@ -1170,11 +1178,12 @@ def playerattack(player, targetindex):
     #verify target still alive
     if target + 1 > len(enemyparty):
         target = random.randint(0, len(enemyparty)-1)
-    print("Target Index: %d" % target)
+    #print("Target Index: %d" % target)
     enemy = enemyparty[target]
     PAttack = math.floor((random.randint(math.floor(currentplayer.attack / 2), currentplayer.attack)) * (10 / (10 + enemy.defense)))
     if PAttack == currentplayer.attack / 2:
         print("%s's attack on %s misses!" % (currentplayer.name, enemy.name))
+        option = input(" ")
     else:
         #check for crit
         crit = round(currentplayer.luck / 5)
@@ -1205,6 +1214,7 @@ def enemyattack(enemy, targetindex):
     EAttack = math.floor((random.randint(math.floor(enemy.attack / 2), enemy.attack)) * (10 / (10 + playertarget.defense)))
     if EAttack == enemy.attack / 2:
         print("%s's attack on %s missed!" % (enemy.name, playertarget.name))
+        option = input(" ")
     else:
         #check for crit
         crit = round(enemy.luck / 5)
@@ -1237,6 +1247,7 @@ def magicattack(player, targetindex):
         PAttack = math.floor((random.randint(math.floor(currentplayer.wisdom / 2), currentplayer.wisdom)) * (10 / (10 + enemy.resistance)))
         if PAttack == currentplayer.wisdom / 2:
             print("%s's fireball missed %s!" % (currentplayer.name, enemy.name))
+            option = input(" ")
         else:
             #check for crit
             crit = round(enemy.luck / 5)
@@ -1267,6 +1278,7 @@ def enemymagicattack(enemy, targetindex):
     EAttack = math.floor((random.randint(math.floor(enemy.wisdom / 2), enemy.wisdom)) * (10 / (10 + playertarget.resistance)))
     if EAttack == enemy.wisdom / 2:
         print("%s's fireball missed %s!" % (enemy.name, playertarget.name))
+        option = input(" ")
     else:
         #check for crit
         crit = round(enemy.luck / 5)
