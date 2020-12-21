@@ -12,6 +12,10 @@ armors = {"Leather Tunic":15, "Robe":10, "Chain Mail":50, "Plate Mail":100, "Mag
 accs = {"Ring":75, "Magic Ring":125, "Mystic Ring":200, "Warrior Ring":100, "Iron Ring":100, "Quick Ring":50, "Agile Ring":100, "Lucky Ring":100, "Fortune Ring":200, "Ranger Ring":200}
 potions = {"Potion":10}
 nothing = {"None"}
+enemies = {1:{"name":"Goblin", "count":0}, 2:{"name":"Zombie","count":0}, 3:{"name":"Fast Zombie","count":0}, 4:{"name":"Imp","count":0}, 5:{"name":"Magic Goblin", "count":0}}
+alphabet = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
+
+
 currentparty = []
 battlepartymembers = []
 enemyparty = []
@@ -19,8 +23,6 @@ defeatedenemyparty = []
 battlemembers = []
 sortedbattlemembers = []
 battleactionqueue = []
-battletargetqueue = []
-baq = []
 invtosell = []
 
 class Player:
@@ -363,7 +365,7 @@ class FastZombie:
         self.expgain = 10
         self.action = "nothing"
         self.chartype = "enemy"
-ZombieIG = Zombie("Zombie")
+FastZombieIG = FastZombie("Fast Zombie")
 
 class Imp:
     def __init__(self, name):
@@ -408,7 +410,7 @@ MagicGoblinIG = MagicGoblin("Magic Goblin")
 class BattleActionClass:
     def __init__(self, name):
         self.name = name
-        self.chartype = "Player"
+        self.chartype = "player"
         self.charclass = "Warrior"
         self.action = "physical"
         self.target = 0
@@ -481,6 +483,7 @@ def start1():
         displaymp(char)
         print("Level: %i" % char.level)
         print("Class: %s" % char.charclass)
+    print("********")
     print("1.) Fight")
     print("2.) Store")
     print("3.) Save")
@@ -489,6 +492,7 @@ def start1():
     print("6.) Exit")
     print("7.) Status")
     print("8.) Recruit new party member")
+    print("********")
     option = input(">")
     if option == "1":
         prefight()
@@ -525,6 +529,7 @@ def status():
         print("Attack: %i" % char.attack)
         print("Defense: %i" % char.defense)
         print("Wisdom: %i" % char.wisdom)
+        print("Magic resistance: %i" % char.resistance)
         print("Agility: %i" % char.agility)
         print("Luck: %i" % char.luck)
         print("Exp: %i/%i Next: %i" % (char.exp, nextlevel(char.level+1),(char.nextlevel - char.exp)))
@@ -576,6 +581,7 @@ def displayclass():
         print("Attack Growth: %s" % char.attackgrowth)
         print("Defense Growth: %s" % char.defensegrowth)
         print("Wisdom Growth: %s" % char.wisdomgrowth)
+        print("Magic Resistance Growth: %s" % char.resistancegrowth)
         print("Agility Growth: %s" % char.agilitygrowth)
         print("Luck Growth: %s" % char.luckgrowth)
         option = input(" ")
@@ -636,8 +642,13 @@ def nextlevel(level):
     baseXP = 10
     return math.floor(baseXP * (level ** exponent))
 
+#experience for next level
 #for n in range(10):
 #	print(nextlevel(n))
+
+#Difference between levels
+#for n in range(1,10):
+#    print(nextlevel(n)-nextlevel(n-1))
 
 def inn():
     os.system("cls")
@@ -756,7 +767,57 @@ def equip1(player):
         print("You don't have %s in your inventory." % option)
         equip1(currentplayer)
 
-def prefight():
+def setenemyparty():
+    #reset enemy counts
+    for monster in enemies:
+        enemies[monster]["count"] = 0
+    #establish average level of party
+    leveltotal = 0
+    for char in currentparty:
+        leveltotal += char.level
+    averagelevel = int(leveltotal/len(currentparty))
+    #set enemy party length
+    maxenemyparty = int(2 + (averagelevel/5))
+    if maxenemyparty >= 26:
+        maxenemyparty = 26
+    #set enemy party count
+    enemycount = random.randint(1, maxenemyparty)
+    print("Avg: %i" % averagelevel)
+    print("Max: %i" % maxenemyparty)
+    tempenemyparty = []
+    for n in range(enemycount):
+        tempenemyparty.append(getenemy())
+ 
+    for monster in tempenemyparty:
+        if monster == "Goblin":
+            GoblinIGA = Goblin("Goblin %s" % alphabet[enemies[1]["count"]])
+            enemyparty.append(GoblinIGA)
+            enemies[1]["count"] += 1
+        if monster == "Zombie":
+            ZombieIGA = Zombie("Zombie %s" % alphabet[enemies[2]["count"]])
+            enemyparty.append(ZombieIGA)
+            enemies[2]["count"] += 1
+        if monster == "Fast Zombie":
+            FastZombieIGA = FastZombie("Fast Zombie %s" % alphabet[enemies[3]["count"]])
+            enemyparty.append(FastZombieIGA)
+            enemies[3]["count"] += 1
+        if monster == "Imp":
+            ImpIGA = Imp("Imp %s" % alphabet[enemies[4]["count"]])
+            enemyparty.append(ImpIGA)
+            enemies[4]["count"] += 1
+        if monster == "Magic Goblin":
+            MagicGoblinIGA = MagicGoblin("Magic Goblin %s" % alphabet[enemies[5]["count"]])
+            enemyparty.append(MagicGoblinIGA)
+            enemies[5]["count"] += 1
+
+def getenemy():
+    #TODO set cap based on average level of which enemies can be ecountered.
+    index = random.randint(1, len(enemies))
+    enemyname = enemies[index]["name"]
+    return enemyname
+
+
+def setenemyparty2():
     #establish enemy party
     global enemy
     enemynum = random.randint(1, 100)
@@ -792,16 +853,22 @@ def prefight():
     else:
         enemy = MagicGoblinIG
         enemyparty.append(MagicGoblinIG)
+
+def prefight():
+    global enemy
+    setenemyparty()
+    #setenemyparty2()
     #establish battle participants
     battlemembers.clear()
     sortedbattlemembers.clear()
     battlepartymembers.clear()
     battleactionqueue.clear()
-    battletargetqueue.clear()
-    baq.clear()
+    #sort enemyparty:
+    enemyparty.sort(key=lambda x: x.agility, reverse=True)
     for char in currentparty:
-        battlemembers.append(char)
-        battlepartymembers.append(char)
+        if char.hp > 0:
+            battlemembers.append(char)
+            battlepartymembers.append(char)
     for monster in enemyparty:
         battlemembers.append(monster)
     #sort battle participants by agility for turn order
@@ -828,19 +895,6 @@ def prefight():
 
 def fight():
     os.system("cls")
-
-    #sort by agility
-    #sortedbattledmembers = sorted(battlemembers, key=lambda x: x.agility, reverse=True)
-    #print(sortedbattlemembers)
-    
-    #for char in battlemembers:
-    #    print("Char: %s" % char.name)
-    #print("%s vs %s" % (PlayerIG.name, enemy.name))
-    #print("%s vs " % PlayerIG.name)
-
-    #print("%s's Health: %d/%d\n%s's Health: %i/%i" % (PlayerIG.name, PlayerIG.hp, PlayerIG.mHP, enemy.name, enemy.hp, enemy.mHP))
-
-    #print("%s's MP: %d/%d\n%s's MP: %i/%i" % (PlayerIG.name, PlayerIG.mp, PlayerIG.mMP, enemy.name, enemy.mp, enemy.mMP))
     print("********")
     for char in battlepartymembers:
         displayhp(char)
@@ -848,15 +902,13 @@ def fight():
     for monster in enemyparty:
         displayhp(monster)
         displaymp(monster)
-    #for char in battlemembers:
-    #    displayhp(char)
-    #    displaymp(char)
     print("\nPotions: %i" % PlayerIG.potions)
     #print("********")
     #determine actions for each party member
     for char in battlemembers:
         if char.chartype == "enemy":
             BattleActionA = BattleActionClass(char.name)
+            BattleActionA.chartype = char.chartype
             #print("Battle Class: %s" % BattleActionA.name)
             enemyaction = enemyactionselector(char)
             BattleActionA.action = enemyaction
@@ -869,7 +921,7 @@ def fight():
             #pause = input(" ")
             #battletargetqueue.append(enemytarget)
 
-            baq.append(BattleActionA)
+            battleactionqueue.append(BattleActionA)
             
             print("********")
             print("%s's turn!" % BattleActionA.name)
@@ -878,6 +930,7 @@ def fight():
             print("Target: %s: %s" % (BattleActionA.target, battlepartymembers[BattleActionA.target].name))
         else:
             BattleActionA = BattleActionClass(char.name)
+            BattleActionA.chartype = char.chartype
             BattleActionA.charclass = char.charclass
             print("********")
             print("%s's turn!" % BattleActionA.name)
@@ -895,7 +948,6 @@ def fight():
                         if option == 2:
                             #check player mp
                             if char.mp <= 0:
-                                print("No MP!")
                                 raise
                     except:
                         print("You are out of MP!\n")
@@ -933,7 +985,7 @@ def fight():
                 #print(enemyparty[BattleActionA.target].name)
                 #pause = input(" ")
 
-                baq.append(BattleActionA)
+                battleactionqueue.append(BattleActionA)
                 
                 #print("Added character: %s" % BattleActionA.name)
                 #print("Action: %s" % BattleActionA.action)
@@ -955,7 +1007,7 @@ def fight():
                 #print(enemyparty[BattleActionA.target].name)
                 #pause = input(" ")
 
-                baq.append(BattleActionA)
+                battleactionqueue.append(BattleActionA)
                 
                 #print("Added character: %s" % char.name)
                 #print("Action: %s" % playeraction)
@@ -976,7 +1028,7 @@ def fight():
                 #print(enemyparty[BattleActionA.target].name)
                 #pause = input(" ")
 
-                baq.append(BattleActionA)
+                battleactionqueue.append(BattleActionA)
                 
                 #print("Added character: %s" % char.name)
                 #print("Action: %s" % playeraction)
@@ -997,7 +1049,7 @@ def fight():
                 #print(enemyparty[BattleActionA.target].name)
                 #pause = input(" ")
 
-                baq.append(BattleActionA)
+                battleactionqueue.append(BattleActionA)
                 
                 #print("Added character: %s" % char.name)
                 #print("Action: %s" % playeraction)
@@ -1018,8 +1070,8 @@ def runbattleactionqueue():
     #    print(battletargetqueue[n])
     #option = input(" ")
 
-    for n in range(len(baq)):
-        print("Name: %s Action: %s Target index: %s" % (baq[n].name, baq[n].action, baq[n].target))
+    for n in range(len(battleactionqueue)):
+        print("Name: %s Action: %s Target index: %s" % (battleactionqueue[n].name, battleactionqueue[n].action, battleactionqueue[n].target))
     option = input(" ")
     
     while i < len(battlemembers):
@@ -1028,42 +1080,42 @@ def runbattleactionqueue():
             enemy = battlemembers[i]
             #choice = battleactionqueue[i]
             #enemytarget = battletargetqueue[i]
-            choice1 = baq[i].action
+            choice = battleactionqueue[i].action
             #print("Enemy choice baq: %s" % choice1)
-            enemytarget1 = baq[i].target
+            enemytarget = battleactionqueue[i].target
             #print("Enemy target baq %i:" % enemytarget1)
             #check if target still exists:
-            if enemytarget1 > len(battlepartymembers):
-                enemytarget1 = 0
-            if choice1 == "physical":
-                enemyattack(enemy, enemytarget1)
+            if enemytarget > len(battlepartymembers):
+                enemytarget = 0
+            if choice == "physical":
+                enemyattack(enemy, enemytarget)
             else:
-                enemymagicattack(enemy, enemytarget1)
+                enemymagicattack(enemy, enemytarget)
             i += 1
         elif battlemembers[i].chartype == "player":
             print(battlemembers[i].name + "'s turn!")
             player = battlemembers[i]
             #action = battleactionqueue[i]
             #playertarget = battletargetqueue[i]
-            action1 = baq[i].action
+            action = battleactionqueue[i].action
             #print("Player action baq: %s" % action1)
-            playertarget1 = baq[i].target
+            playertarget = battleactionqueue[i].target
             #print("Player target baq %i:" % playertarget1)
             #check if target still exists:
-            if playertarget1 > len(enemyparty):
-                playertarget1 = 0
-            if action1 == "physical":
-                playerattack(player, playertarget1)
-            elif action1 == "magic":
+            if playertarget > len(enemyparty):
+                playertarget = 0
+            if action == "physical":
+                playerattack(player, playertarget)
+            elif action == "magic":
                 #check player mp
                 if player.mp <= 0:
                     print("You are out of MP!\n")
                     break
                 else:
-                    magicattack(player, playertarget1)
-            elif action1 == "drink":
-                drinkpotion(player, playertarget1)
-            elif action1 == "run":
+                    magicattack(player, playertarget)
+            elif action == "drink":
+                drinkpotion(player, playertarget)
+            elif action == "run":
                 runsuccess = run()
                 if runsuccess:
                     start1()
@@ -1088,9 +1140,8 @@ def runbattleactionqueue():
         option = input(" ")
         #else:
             #print("Done\n")
-    #battleactionqueue.clear()
     #battletargetqueue.clear()
-    baq.clear()
+    battleactionqueue.clear()
     fight()
             
 
@@ -1171,6 +1222,26 @@ def getplayertargetforenemy():
     return target
 
 
+def updatetargetindex(index, charactertype):
+    #when an enemy is killed, update target indices higher than the index of the enemy that was killed.
+    target = index
+    chartype = charactertype
+    print("Indexcurrent: %i" % target)
+    print("Chartype: %s" % chartype)
+    for action in battleactionqueue:
+        if action.chartype != chartype:
+            print("Action name: %s" % action.name)
+            print("Action Chartype: %s" % action.chartype)
+            print("Target index: %i" % action.target)
+            if action.target >= target:
+                action.target -= 1
+                print("New target index: %i" % action.target)
+                if action.target < 0:
+                    action.target = 0
+                print("Fixed target index: %i" % action.target)
+            print("Target index: %i" % action.target)
+    
+
 def playerattack(player, targetindex):
     os.system("cls")
     currentplayer = player
@@ -1195,6 +1266,8 @@ def playerattack(player, targetindex):
         option = input(" ")
         if enemy.hp <= 0:
             print("%s defeated!\n" % enemy.name)
+            index = enemyparty.index(enemy)
+            updatetargetindex(index, "enemy")
             enemy.hp = enemy.mHP
             defeatedenemyparty.append(enemy)
             enemyparty.remove(enemy)
@@ -1226,6 +1299,9 @@ def enemyattack(enemy, targetindex):
         option = input(" ")
         if playertarget.hp <= 0:
             print("%s was slain!\n" % playertarget.name)
+            playertarget.hp = 0
+            index = battlepartymembers.index(playertarget)
+            updatetargetindex(index, "player")
             battlepartymembers.remove(playertarget)
             battlemembers.remove(playertarget)
             dead()
@@ -1238,7 +1314,6 @@ def magicattack(player, targetindex):
     if target + 1 > len(enemyparty):
         target = random.randint(0, len(enemyparty)-1)
     enemy = enemyparty[target]
-    print("Magic attack!")
     if currentplayer.mp <= 0:
         print("%s is out of MP!\n" % currentplayer.name)
         #fight()
@@ -1252,13 +1327,15 @@ def magicattack(player, targetindex):
             #check for crit
             crit = round(enemy.luck / 5)
             if 99 - crit < random.randint(0,100):
-                EAttack *= 2
+                PAttack *= 2
                 print("Critical hit!")
             enemy.hp -= PAttack
             print("%s's fireball deals %i damage to %s!" % (currentplayer.name, PAttack, enemy.name))
             option = input(" ")
             if enemy.hp <= 0:
                 print("%s defeated!\n" % enemy.name)
+                index = enemyparty.index(enemy)
+                updatetargetindex(index, "enemy")
                 enemy.hp = enemy.mHP
                 defeatedenemyparty.append(enemy)
                 enemyparty.remove(enemy)
@@ -1290,6 +1367,9 @@ def enemymagicattack(enemy, targetindex):
         option = input(" ")
         if playertarget.hp <= 0:
             print("%s was slain!\n" % playertarget.name)
+            playertarget.hp = 0
+            index = battlepartymembers.index(playertarget)
+            updatetargetindex(index, "player")
             battlepartymembers.remove(playertarget)
             battlemembers.remove(playertarget)
             dead()
@@ -1357,16 +1437,16 @@ def win():
         #    print("You have defeated the %s" % monster.name)
         print("You have won the battle!")
         print("You found %i gold!" % goldgain)
-        print("You gained %i experience!" % expgain)
+        print("You gained %i experience!\n" % expgain)
         for char in battlepartymembers:
-            print("Checking %s" %char.name)
+            print("%s:" %char.name)
             if char.nextlevel - char.exp <= 0:
                 print("Experience to next level: 0")
+                while char.exp >= char.nextlevel:
+                    levelup(char)
             else:
                 print("Experience to next level: %d" % (char.nextlevel - char.exp))
-            while char.exp >= char.nextlevel:
-                levelup(char)
-            option = input(" ")
+                option = input(" ")
         enemyparty.clear()
         defeatedenemyparty.clear()
         battlepartymembers.clear()
@@ -1437,7 +1517,12 @@ def levelup(char):
         player.base_wisdom += gain
     else:
         print("Wisdom: %i" % player.wisdom)
-    player.nextlevel = nextlevel(player.level+1)
+    gain = rollgain(player.resistancegrowth)
+    if gain > 0:
+        print("Magic Resistance: %i +%i" % (player.resistance, gain))
+        player.base_resistance += gain
+    else:
+        print("Magic Resistance: %i" % player.resistance)
     gain = rollgain(player.agilitygrowth)
     if gain > 0:
         print("Agility: %i +%i" % (player.agility, gain))
@@ -1450,7 +1535,6 @@ def levelup(char):
         player.base_luck += gain
     else:
         print("Luck: %i\n" % player.luck)
-    player.nextlevel = nextlevel(player.level+1)
     player.nextlevel = nextlevel(player.level+1)
     print("Exp: %i/%i" % (player.exp, nextlevel(player.level+1)))
     option = input(" ")
