@@ -14,7 +14,10 @@ potions = {"Potion":10}
 nothing = {"None"}
 enemies = {1:{"name":"Goblin", "count":0}, 2:{"name":"Zombie","count":0}, 3:{"name":"Fast Zombie","count":0}, 4:{"name":"Imp","count":0}, 5:{"name":"Magic Goblin", "count":0}}
 alphabet = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
-
+global areas
+areas = {}
+global width
+global height
 
 currentparty = []
 battlepartymembers = []
@@ -24,6 +27,7 @@ battlemembers = []
 sortedbattlemembers = []
 battleactionqueue = []
 invtosell = []
+
 
 class Player:
     def __init__(self, name, charclass):
@@ -60,6 +64,7 @@ class Player:
         self.charclass = charclass
         self.action = "nothing"
         self.chartype = "player"
+        self.currentposition = 1
 
     @property
     def attack(self):
@@ -415,6 +420,36 @@ class BattleActionClass:
         self.action = "physical"
         self.target = 0
 
+class Area:
+    def __init__(self, name):
+        self.name = name
+        self.idno = 0
+        self.north = 0
+        self.south = 0
+        self.east = 0
+        self.west = 0
+        self.up = 0
+        self.down = 0
+        self.items = []
+        self.sign = ""
+        self.initswitch = False
+        self.initmessage = ""
+        self.message = ""
+        self.enemy = False
+
+width = 1
+height = 1
+x = 1
+for x in range(x):
+    i = x + 1
+    AreaIG = Area("Room %i" % i)
+    AreaIG.idno = i
+#    AreaIG.east = i+1
+#    AreaIG.south = i+4
+#    AreaIG.west = i-1
+#    AreaIG.north = i-4
+#    areas.append(AreaIG)
+    areas[i] = AreaIG
 
 def main():
     os.system("cls")
@@ -437,6 +472,7 @@ def start():
     print("Hello, what is your name?")
     name = input(">")
     print("Greetings %s!" % name)
+    print("Press enter to continue.")
     option = input(" ")
     print("What is your class?")
     global PlayerIG
@@ -450,6 +486,7 @@ def start():
     else:
         PlayerIG = Player(name, "Nothing")
     currentparty.append(PlayerIG)
+    PlayerIG.currentposition = 1
     start1()
 
 def newchar():
@@ -473,9 +510,66 @@ def newchar():
         currentparty.append(newplayer)
         start1()
 
+def showstatus(areaset, currentposition):
+    areas = areaset
+    position = currentposition
+    #print(areas)
+    print("********")
+    print("Area: {}".format(areas[position].name))
+    if areas[position].initswitch == True:
+        if not areas[position].initmessage:
+            pass
+        else:
+            print("{}".format(areas[position].initmessage))
+        areas[position].initswitch = False
+    if not areas[position].message:
+        pass
+    else:
+        print("{}".format(areas[position].message))
+    if areas[position].north != 0:
+        print("There is a path leading north.")
+    if areas[position].south != 0:
+        print("There is a path leading south.")
+    if areas[position].east != 0:
+        print("There is a path leading east.")
+    if areas[position].west != 0:
+        print("There is a path leading west.")
+    if areas[position].up != 0:
+        print("There is a path leading up.")
+    if areas[position].down != 0:
+        print("There is a path leading down.")
+    if not areas[position].sign:
+        pass
+    else:
+        print("There is a sign nearby.")
+    if not areas[position].items:
+        pass
+    else:
+        for item in areas[position].items:
+            print("You see a {} lying on the ground.".format(item))
+    if areas[position].enemy == True:
+        print("You sense danger nearby...")
+        #Set up chance that battle starts immediately with ambush attack, else enter battle via command
+        totalagility = 0
+        for char in currentparty:
+            totalagility += char.agility
+        averageagility = totalagility / len(currentparty)
+        ambush = random.randint(1,99)
+        if ambush > 75:
+            print("Ambush attack!")
+            prefight()
+    print("********")
+        
+
 def start1():
     os.system("cls")
-    print("Hello %s What would you like to do?\n" % PlayerIG.name)
+    global areas
+    global width
+    global height
+    showmap(width, height, PlayerIG.currentposition)
+    showstatus(areas, PlayerIG.currentposition)
+    currentarea = areas[PlayerIG.currentposition]
+    print("Hello %s what would you like to do?\n" % PlayerIG.name)
     print("Gold: %i" % PlayerIG.gold)
     print("Potions: %i\n" % PlayerIG.potions)
     for char in currentparty:
@@ -492,6 +586,8 @@ def start1():
     print("6.) Exit")
     print("7.) Status")
     print("8.) Recruit new party member")
+    print("9.) Display classes")
+    print("10.) Load Area Set")
     print("********")
     option = input(">")
     if option == "1":
@@ -512,10 +608,81 @@ def start1():
         newchar()
     elif option == "9":
         displayclass()
+    elif option == "10":
+        print("Please enter the filename of the areaset you would like to load.")
+        filename = input(">")
+        areas, width, height, PlayerIG.currentposition = loadareaset(filename)
+        start1()
+        #runareaset(areas, width, height, currentposition)
+    elif "read" in option:
+        if not currentarea.sign:
+            print("There is nothing here to read.\n")
+        else:
+            print("Reading the nearby sign:")
+            print("{}".format(currentarea.sign))
+            print("\n")
+        start1()
+    elif "look" in option:
+        print("{}".format(areas[PlayerIG.currentposition].initmessage))
+        print("********")
+        start1()        
+    elif "go" in option and "east" not in option and "west" not in option and "north" not in option and "south" not in option:
+        print("Go where?")
+        start1()
+    elif "go" and "east" in option:
+        print("Go east?")
+        currentarea = areas[PlayerIG.currentposition]
+        if currentarea.east:
+            PlayerIG.currentposition = currentarea.east
+        else:
+            print("There is no path in that direction.")
+        start1()
+    elif "go" and "west" in option:
+        print("Go west?")
+        currentarea = areas[PlayerIG.currentposition]
+        if currentarea.west:
+            PlayerIG.currentposition = currentarea.west
+        else:
+            print("There is no path in that direction.")
+        start1()
+    elif "go" and "north" in option:
+        print("Go north?")
+        currentarea = areas[PlayerIG.currentposition]
+        if currentarea.north:
+            PlayerIG.currentposition = currentarea.north
+        else:
+            print("There is no path in that direction.")
+        start1()
+    elif "go" and "south" in option:
+        print("Go south?")
+        currentarea = areas[PlayerIG.currentposition]
+        if currentarea.south:
+            PlayerIG.currentposition = currentarea.south
+        else:
+            print("There is no path in that direction.")
+        start1()
+    elif "go" and "up" in option:
+        print("Go up?")
+        currentarea = areas[PlayerIG.currentposition]
+        if currentarea.up:
+            PlayerIG.currentposition = currentarea.up
+        else:
+            print("There is no path in that direction.")
+        start1()
+    elif "go" and "down" in option:
+        print("Go down?")
+        currentarea = areas[PlayerIG.currentposition]
+        if currentarea.down:
+            PlayerIG.currentposition = currentarea.down
+        else:
+            print("There is no path in that direction.")
+        start1()
     else:
         start1()
 
 def status():
+    print("********")
+    showmap(width, height, PlayerIG.currentposition)
     print("********")
     print("Gold: %i" % PlayerIG.gold)
     print("Potions: %i\n" % PlayerIG.potions)
@@ -539,6 +706,44 @@ def status():
         print("********")
         option = input(" ")
     start1()
+
+def showmap(areawidth, areaheight, currentposition):
+    global width
+    global height
+    width = areawidth
+    height = areaheight
+    PlayerIG.currentposition = currentposition
+    print("Map:",end="")
+    #get column
+    column = PlayerIG.currentposition % width
+    #get row
+    row = int(PlayerIG.currentposition / width)
+    #print Coordinates
+    #catch when in last column
+    if column == 0:
+        row -= 1
+        print(" " + "%i, " % width + str(row + 1))
+    else:
+        print(" " + str(column) + ", " + str(row + 1))
+    #setup temporary count
+    count = row
+    #print rows before current location
+    while count > 0:
+        #print("[-----]")
+        print("[" + "".join("{}".format("-") for k in range(width)) + "]")
+        count -= 1
+    #print location
+    if column == 0:
+        print("[" + "".join("{}".format("-") for k in range(width-1)) + "*" + "]")
+    else:
+        before = column % width - 1
+        after = width - before - 1
+        print("[" + "".join("{}".format("-") for i in range(before)) + "*" + "".join("{}".format("-") for k in range(after)) + "]")
+    #print rows after current location
+    count = height - 1 - row
+    while count > 0:
+        print("[" + "".join("{}".format("-") for k in range(width)) + "]")
+        count -= 1
 
 def savegame():
     os.system("cls")
@@ -570,6 +775,32 @@ def loadgame():
         print("********")
         option =  input(" ")
         main()
+
+def saveareaset(filename, areaset, areawidth, areaheight, currentposition):
+    print(filename)
+    print(areaset)
+    #create filename string
+    newareas = str(filename) + ".pkl"
+    fi = open(newareas, "bw")
+    pickle.dump(areaset,fi)
+    pickle.dump(areawidth, fi)
+    pickle.dump(areaheight, fi)
+    pickle.dump(currentposition, fi)
+    fi.close()
+    print("Areas saved!")
+
+def loadareaset(filename):
+    #create filename string
+    newareas = str(filename) + ".pkl"
+    print("Areas: ")
+    print(newareas)
+    fi = open(newareas, "rb")
+    tempareas = pickle.load(fi)
+    width = pickle.load(fi)
+    height = pickle.load(fi)
+    position = pickle.load(fi)
+    print("New areas loaded successfully!")
+    return  tempareas, width, height, position
 
 def displayclass():
     os.system("cls")
