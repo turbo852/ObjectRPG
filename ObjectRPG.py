@@ -3,14 +3,29 @@ import os
 import random
 import math
 import pickle
+from os import path
 
 
 #TODO
+#Update movement system so that each direction sets a tuple.
+#Position 1 is the areaset name and position 2 is the position ID.
+#Update save and load system to save and load areaset.
+#Implement NPCs in areas that the player can interact with by talking to, buying and selling from, etc.
+#Implement object system. NPCs are one object type. Others can be switches, levers, or other things to interact with.
+#Objects will have a name, command to interact, array of states, each state will have conditions to move to the next state.
+#Conditions can be updating a switch or variable or combination of 2 inputs.
+#Conditions are met via interacting using commands such as: give, talk, examine, etc.
+#Implement moving between areasets using "up" and "down" commands.
+#Implement spell system allowing multiple spells to choose from.
+#Learned spells will be in an inventory on the character.
+#Each character will have a list of spells that they will learn at specific levels. This might be defined on the class.
+#Implement shop lists so that shops may be loaded with specific items only.
 
 weapons = {"Rusty Sword":20, "Dagger":15, "Wand":10, "Great Sword":40, "Battle Axe":50, "Iron Dagger":70, "Rod":50, "Staff":200}
 armors = {"Leather Tunic":15, "Robe":10, "Chain Mail":50, "Plate Mail":100, "Magic Cloak":75, "Wizard Robe":200,"Shadow Cloak":150}
 accs = {"Ring":75, "Magic Ring":125, "Mystic Ring":200, "Warrior Ring":100, "Iron Ring":100, "Quick Ring":50, "Agile Ring":100, "Lucky Ring":100, "Fortune Ring":200, "Ranger Ring":200}
 potions = {"Potion":10}
+spells = ["fireball"]
 nothing = {"None"}
 enemies = {1:{"name":"Goblin", "count":0}, 2:{"name":"Zombie","count":0}, 3:{"name":"Fast Zombie","count":0}, 4:{"name":"Imp","count":0}, 5:{"name":"Magic Goblin", "count":0}}
 alphabet = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
@@ -51,16 +66,21 @@ class Player:
         self.agilitygrowth = "med"
         self.base_luck = 2
         self.luckgrowth = "med"
+        self.fireres = 0
+        self.electricres = 0
+        self.iceres = 0
+        self.healres = 0
         self.gold = 100
         self.exp = 0
         self.nextlevel = nextlevel(self.level+1)
-        self.potions = 2
+        self.potions = 1
         self.weapon = ["Rusty Sword"]
         self.curweapon = "None"
         self.armor = ["Leather Tunic"]
         self.curarmor = "None"
         self.acc = []
         self.curacc = "None"
+        self.items = ["potion"]
         self.charclass = charclass
         self.action = "nothing"
         self.chartype = "player"
@@ -229,16 +249,21 @@ class Warrior(Player):
         self.agilitygrowth = "med"
         self.base_luck = 2
         self.luckgrowth = "low"
+        self.fireres = 0
+        self.electricres = 0
+        self.iceres = 0
+        self.healres = 0
         self.gold = 100
         self.exp = 0
         self.nextlevel = nextlevel(self.level+1)
-        self.potions = 2
+        self.potions = 1
         self.weapon = ["Rusty Sword"]
         self.curweapon = "None"
         self.armor = ["Leather Tunic"]
         self.curarmor = "None"
         self.acc = []
         self.curacc = "None"
+        self.items = ["potion"]
         self.charclass = charclass
         self.action = "nothing"
         self.chartype = "player"
@@ -265,16 +290,21 @@ class Thief(Player):
         self.agilitygrowth = "high"
         self.base_luck = 5
         self.luckgrowth = "high"
+        self.fireres = 0
+        self.electricres = 0
+        self.iceres = 0
+        self.healres = 0
         self.gold = 100
         self.exp = 0
         self.nextlevel = nextlevel(self.level+1)
-        self.potions = 2
+        self.potions = 1
         self.weapon = ["Dagger"]
         self.curweapon = "None"
         self.armor = ["Leather Tunic"]
         self.curarmor = "None"
         self.acc = []
         self.curacc = "None"
+        self.items = ["potion"]
         self.charclass = charclass
         self.action = "nothing"
         self.chartype = "player"
@@ -301,19 +331,26 @@ class Mage(Player):
         self.agilitygrowth = "med"
         self.base_luck = 3
         self.luckgrowth = "med"
+        self.fireres = 0
+        self.electricres = 0
+        self.iceres = 0
+        self.healres = 0
         self.gold = 100
         self.exp = 0
         self.nextlevel = nextlevel(self.level+1)
-        self.potions = 2
+        self.potions = 1
         self.weapon = ["Wand"]
         self.curweapon = "None"
         self.armor = ["Robe"]
         self.curarmor = "None"
         self.acc = []
         self.curacc = "None"
+        self.items = ["potion"]
         self.charclass = charclass
         self.action = "nothing"
         self.chartype = "player"
+        self.learnedspells = ["fireball"]
+        self.spells = {1:"fireball", 2:"heal", 4:"icicle", 7:"zap"}
 
 class Goblin:
     def __init__(self, name):
@@ -326,6 +363,10 @@ class Goblin:
         self.defense = 1
         self.wisdom = 0
         self.resistance = 1
+        self.fireres = 0
+        self.electricres = 0
+        self.iceres = 0
+        self.healres = 0
         self.agility = 3
         self.luck = 1
         self.goldgain = 10
@@ -345,6 +386,10 @@ class Zombie:
         self.defense = 3
         self.wisdom = 0
         self.resistance = -5
+        self.fireres = -5
+        self.electricres = 0
+        self.iceres = 0
+        self.healres = -10
         self.agility = 2
         self.luck = 1
         self.goldgain = 15
@@ -364,6 +409,10 @@ class FastZombie:
         self.defense = 4
         self.wisdom = 0
         self.resistance = -5
+        self.fireres = -5
+        self.electricres = 0
+        self.iceres = 0
+        self.healres = -10
         self.agility = 7
         self.luck = 1
         self.goldgain = 20
@@ -383,6 +432,10 @@ class Imp:
         self.defense = 5
         self.wisdom = 0
         self.resistance = 3
+        self.fireres = 0
+        self.electricres = 0
+        self.iceres = 0
+        self.healres = 0
         self.agility = 5
         self.luck = 2
         self.goldgain = 20
@@ -402,6 +455,10 @@ class MagicGoblin:
         self.defense = 4
         self.wisdom = 10
         self.resistance = 10
+        self.fireres = 10
+        self.electricres = 10
+        self.iceres = 10
+        self.healres = 0
         self.agility = 5
         self.luck = 1
         self.goldgain = 25
@@ -436,6 +493,57 @@ class Area:
         self.initmessage = ""
         self.message = ""
         self.enemy = False
+        self.switches = [False]
+        self.variables = [0]
+
+class Items:
+    def __init__(self, name):
+        self.name = name
+        self.type = "normal"
+        self.cost = 0
+        self.description = ""
+        self.value = 0
+        self.consumable = False
+
+class Spell:
+    def __init__(self, name):
+        self.name = name
+        self.type = "magic"
+        self.mpcost = 0
+        self.description = ""
+        self.message = ""
+        self.basepower = 0
+        self.targettype = "enemy"
+        self.target = "single"
+
+fireball = Spell("Fireball")
+fireball.type = "fire"
+fireball.mpcost = 5
+fireball.description = "A single target ball of fire."
+fireball.message = "threw a fireball"
+fireball.basepower = 5
+
+zap = Spell("Zap")
+zap.type = "electric"
+zap.mpcost = 10
+zap.description = "A single target tongue of lightning."
+zap.message = "hurled a bolt of lightning"
+zap.basepower = 10
+
+icicle = Spell("Icicle")
+icicle.type = "ice"
+icicle.mpcost = 7
+icicle.description = "A single target icicle."
+icicle.message = "threw an icicle"
+icicle.basepower = 7
+
+heal = Spell("Heal")
+heal.type = "healing"
+heal.mpcost = 5
+heal.description = "Heals 50 HP for one party member."
+heal.message = "sent a wave of healing energy"
+heal.basepower = 50
+
 
 width = 1
 height = 1
@@ -469,11 +577,16 @@ def main():
 
 def start():
     os.system("cls")
+    print("Which game will you load? \nPlease enter the filename of the areaset you would like to load.")
+    filename = input(">")
+    global areas
+    global width
+    global height
+    areas, width, height, position = loadareaset(filename)
     print("Hello, what is your name?")
     name = input(">")
     print("Greetings %s!" % name)
-    print("Press enter to continue.")
-    option = input(" ")
+    option = input("Press enter to continue.")
     print("What is your class?")
     global PlayerIG
     charclass = input("Warrior, Thief, or Mage? \n>")
@@ -486,7 +599,8 @@ def start():
     else:
         PlayerIG = Player(name, "Nothing")
     currentparty.append(PlayerIG)
-    PlayerIG.currentposition = 1
+    PlayerIG.currentposition = position
+    readintro(areas)
     start1()
 
 def newchar():
@@ -496,7 +610,7 @@ def newchar():
         print("Hello, what is your name?")
         newplayer = input(">")
         print("Greetings %s!" % newplayer)
-        option = input(" ")
+        option = input("Press enter to continue.")
         print("What is your class?")
         charclass = input("Warrior, Thief, or Mage? \n>")
         if charclass == "Warrior":
@@ -509,6 +623,12 @@ def newchar():
             newplayer = Player(newplayer, "Nothing")
         currentparty.append(newplayer)
         start1()
+
+def readintro(areaset):
+    areas = areaset
+    intro = areas[0].initmessage
+    print(intro)
+    areas[0].initswitch = False
 
 def showstatus(areaset, currentposition):
     areas = areaset
@@ -613,7 +733,6 @@ def start1():
         filename = input(">")
         areas, width, height, PlayerIG.currentposition = loadareaset(filename)
         start1()
-        #runareaset(areas, width, height, currentposition)
     elif "read" in option:
         if not currentarea.sign:
             print("There is nothing here to read.\n")
@@ -625,55 +744,196 @@ def start1():
     elif "look" in option:
         print("{}".format(areas[PlayerIG.currentposition].initmessage))
         print("********")
-        start1()        
+        start1()
+    elif "take" in option:
+        if not areas[PlayerIG.currentposition].items:
+            print("There is nothing to take in this area.")
+            start1()
+        else:
+            if len(areas[PlayerIG.currentposition].items) == 1:
+                if len(currentparty) == 1:
+                    print("{} took the {}.".format(currentparty[0].name,areas[PlayerIG.currentposition].items[0]))
+                    currentparty[0].items.append(areas[PlayerIG.currentposition].items[0])
+                    areas[PlayerIG.currentposition].items.remove(areas[PlayerIG.currentposition].items[0])
+                else:
+                    print("Give to who?")
+                    while True:
+                        for char in currentparty:
+                            print(char.name)
+                        option = input(">")
+                        for char in currentparty:
+                            if option == char.name:
+                                print("{} took the {}.".format(char.name,areas[PlayerIG.currentposition].items[0]))
+                                char.items.append(areas[PlayerIG.currentposition].items[0])
+                                areas[PlayerIG.currentposition].items[0]
+                                start1()
+                        print("Please specify a valid party member.")
+            else:
+                print("Take which item?")
+                while True:
+                    for item in areas[PlayerIG.currentposition].items:
+                        print(item)
+                    option = input(">")
+                    for item in areas[PlayerIG.currentposition].items:
+                        if option == item:
+                            if len(currentparty) == 1:
+                                print("{} took the {}.".format(currentparty[0].name,item))
+                                currentparty[0].items.append(item)
+                                areas[PlayerIG.currentposition].items.remove(item)
+                                start1()
+                            else:
+                                print("Give to who?")
+                                while True:
+                                    for char in currentparty:
+                                        print(char.name)
+                                    option = input(">")
+                                    for char in currentparty:
+                                        if option == char.name:
+                                            print("{} took the {}.".format(char.name, item))
+                                            char.items.append(item)
+                                            areas[PlayerIG.currentposition].items.remove(item)
+                                            start1()
+                                    print("Please specify a valid party member.")
+                    break
+            start1()
     elif "go" in option and "east" not in option and "west" not in option and "north" not in option and "south" not in option:
         print("Go where?")
         start1()
     elif "go" and "east" in option:
-        print("Go east?")
-        currentarea = areas[PlayerIG.currentposition]
         if currentarea.east:
-            PlayerIG.currentposition = currentarea.east
+            if currentarea.east < 0:
+                print("That door is locked.")
+                for char in currentparty:
+                    if "key" in char.items:
+                        while True:
+                            print("Use key?")
+                            print("1.) Yes.")
+                            print("2.) No.")
+                            option = input(">")
+                            if option == "2":
+                                break
+                            elif option == "1":
+                                print("{} used a key to open the door.".format(char.name))
+                                currentarea.east *= -1
+                                PlayerIG.currentposition = currentarea.east
+                                break
+                            else:
+                                print("Please enter a valid selection.")
+            else:
+                PlayerIG.currentposition = currentarea.east
         else:
             print("There is no path in that direction.")
         start1()
     elif "go" and "west" in option:
-        print("Go west?")
-        currentarea = areas[PlayerIG.currentposition]
         if currentarea.west:
-            PlayerIG.currentposition = currentarea.west
+            if currentarea.west < 0:
+                print("That door is locked.")
+                for char in currentparty:
+                    if "key" in char.items:
+                        while True:
+                            print("Use key?")
+                            print("1.) Yes.")
+                            print("2.) No.")
+                            option = input(">")
+                            if option == "2":
+                                break
+                            elif option == "1":
+                                print("{} used a key to open the door.".format(char.name))
+                                currentarea.east *= -1
+                                PlayerIG.currentposition = currentarea.west
+                                break
+                            else:
+                                print("Please enter a valid selection.")
+            else:
+                PlayerIG.currentposition = currentarea.west
         else:
             print("There is no path in that direction.")
         start1()
     elif "go" and "north" in option:
-        print("Go north?")
-        currentarea = areas[PlayerIG.currentposition]
         if currentarea.north:
-            PlayerIG.currentposition = currentarea.north
+            if currentarea.north < 0:
+                print("That door is locked.")
+                for char in currentparty:
+                    if "key" in char.items:
+                        while True:
+                            print("Use key?")
+                            print("1.) Yes.")
+                            print("2.) No.")
+                            option = input(">")
+                            if option == "2":
+                                break
+                            elif option == "1":
+                                print("{} used a key to open the door.".format(char.name))
+                                currentarea.east *= -1
+                                PlayerIG.currentposition = currentarea.north
+                                break
+                            else:
+                                print("Please enter a valid selection.")
+            else:
+                PlayerIG.currentposition = currentarea.north
         else:
             print("There is no path in that direction.")
         start1()
     elif "go" and "south" in option:
-        print("Go south?")
-        currentarea = areas[PlayerIG.currentposition]
         if currentarea.south:
-            PlayerIG.currentposition = currentarea.south
+            if currentarea.south < 0:
+                print("That door is locked.")
+                for char in currentparty:
+                    if "key" in char.items:
+                        while True:
+                            print("Use key?")
+                            print("1.) Yes.")
+                            print("2.) No.")
+                            option = input(">")
+                            if option == "2":
+                                break
+                            elif option == "1":
+                                print("{} used a key to open the door.".format(char.name))
+                                currentarea.east *= -1
+                                PlayerIG.currentposition = currentarea.south
+                                break
+                            else:
+                                print("Please enter a valid selection.")
+            else:
+                PlayerIG.currentposition = currentarea.south
         else:
             print("There is no path in that direction.")
         start1()
     elif "go" and "up" in option:
-        print("Go up?")
-        currentarea = areas[PlayerIG.currentposition]
         if currentarea.up:
-            PlayerIG.currentposition = currentarea.up
+            if currentarea.up is not int:
+                #save current areaset to retain object permanence
+                previousareaset = "temp" + areas[0].name
+                saveareaset(previousareaset, areas, width, height, PlayerIG.currentposition)
+                #load next area
+                nextareaset = "temp" + areas[PlayerIG.currentposition].up
+                if path.exists(nextareaset + ".pkl"):
+                    print("Temp exists!")
+                    #load saved instance of areaset
+                    areas, width, height, PlayerIG.currentposition = loadareaset(nextareaset)
+                else:
+                    print("Temp doesn't exist...")
+                    #load original areaset
+                    areas, width, height, PlayerIG.currentposition = loadareaset(areas[PlayerIG.currentposition].up)
         else:
             print("There is no path in that direction.")
         start1()
     elif "go" and "down" in option:
-        print("Go down?")
-        currentarea = areas[PlayerIG.currentposition]
         if currentarea.down:
-            PlayerIG.currentposition = currentarea.down
+            if currentarea.down is not int:
+                #save current areaset to retain object permanence
+                previousareaset = "temp" + areas[0].name
+                saveareaset(previousareaset, areas, width, height, PlayerIG.currentposition)
+                #load next area
+                nextareaset = "temp" + areas[PlayerIG.currentposition].down
+                if path.exists(nextareaset + ".pkl"):
+                    print("Temp exists!")
+                    #load saved instance of areaset
+                    areas, width, height, PlayerIG.currentposition = loadareaset(nextareaset)
+                else:
+                    print("Temp doesn't exist...")
+                    #load original areaset
+                    areas, width, height, PlayerIG.currentposition = loadareaset(areas[PlayerIG.currentposition].down)
         else:
             print("There is no path in that direction.")
         start1()
@@ -794,13 +1054,17 @@ def loadareaset(filename):
     newareas = str(filename) + ".pkl"
     print("Areas: ")
     print(newareas)
-    fi = open(newareas, "rb")
-    tempareas = pickle.load(fi)
-    width = pickle.load(fi)
-    height = pickle.load(fi)
-    position = pickle.load(fi)
-    print("New areas loaded successfully!")
-    return  tempareas, width, height, position
+    try:
+        fi = open(newareas, "rb")
+    except IOError:
+        print("Can't load", newareas)
+    else:
+        tempareas = pickle.load(fi)
+        width = pickle.load(fi)
+        height = pickle.load(fi)
+        position = pickle.load(fi)
+        print("New areas loaded successfully!")
+        return  tempareas, width, height, position
 
 def displayclass():
     os.system("cls")
@@ -914,12 +1178,61 @@ def inventory():
     os.system("cls")
     print("What do you want to do?")
     print("1.) Equip")
+    print("2.) View items")
     print("b.) go back")
     option = input(">")
     if option == "1":
         equip()
+    elif option == "2":
+        viewitems()
     elif option == "b" or option == "back":
         start1()
+
+def viewitems():
+    os.system("cls")
+    print("Please select a party member.")
+    for char in currentparty:
+        print(char.name)
+    option = input(">")
+    for char in currentparty:
+        if option == char.name:
+            currentplayer = char
+            viewitems1(currentplayer)
+    print("Please specify a valid party member.")
+    viewitems()
+
+def viewitems1(player):
+    os.system("cls")
+    currentplayer = player
+    for item in currentplayer.items:
+        print(item)
+    print("1.) Use")
+    print("2.) Drop")
+    print("b.) go back")
+    option = input(">")
+    if option == "1":
+        inventory()
+    elif option == "2":
+        print("Drop which item?")
+        for item in currentplayer.items:
+            print(item)
+        print("b.) Back")
+        option = input(">")
+        if option in currentplayer.items:
+            currentplayer.items.remove(option)
+            areas[PlayerIG.currentposition].items.append(option)
+            print("{} has been dropped.".format(option))
+            viewitems1(currentplayer)
+        elif option == "b" or option == "back":
+            inventory()
+        else:
+            print("{} does not have {} to drop.".format(currentplayer.name, option))
+            viewitems1(currentplayer)
+    elif option == "b" or option == "back":
+        inventory()
+    else:
+        print("Please enter a valid selection.")
+        viewitems1(currentplayer)
 
 def equip():
     os.system("cls")
@@ -964,7 +1277,7 @@ def equip1(player):
         print("You have equipped %s." % option)
         option = input(" ")
         equip1(currentplayer)
-    if option == currentplayer.curarmor:
+    elif option == currentplayer.curarmor:
         print(currentplayer.curarmor)
         print("You already have that armor equipped.")
         option = input(" ")
@@ -979,7 +1292,7 @@ def equip1(player):
         print("You have equipped %s." % option)
         option = input(" ")
         equip1(currentplayer)
-    if option == currentplayer.curacc:
+    elif option == currentplayer.curacc:
         print(currentplayer.curacc)
         print("You already have that accessory equipped.")
         option = input(" ")
@@ -1609,10 +1922,13 @@ def drinkpotion(char, targetindex):
     os.system("cls")
     player = char
     target = targetindex
-    targetchar = currentparty[target] 
-    if PlayerIG.potions == 0:
+    targetchar = currentparty[target]
+    if "potion" not in player.items:
         print("You don't have any potions!")
         option = input(" ")
+    #if PlayerIG.potions == 0:
+    #    print("You don't have any potions!")
+    #    option = input(" ")
         #fight()
     elif targetchar.hp == targetchar.mHP:
         print("%s is already at max health!" % targetchar.name)
@@ -1629,7 +1945,8 @@ def drinkpotion(char, targetindex):
         targetchar.hp += 50
         if targetchar.hp > targetchar.mHP:
             targetchar.hp = targetchar.mHP
-        PlayerIG.potions -= 1    
+        PlayerIG.potions -= 1
+        player.items.remove("potion")
     option = input(" ")
 
 def run():
@@ -1863,6 +2180,7 @@ def storebuy():
             os.system("cls")
             PlayerIG.gold -= potions[option]
             PlayerIG.potions += 1
+            player.items.append("potion")
             print("You have purchased a potion.")
             option = input(" ")
             storebuy()
