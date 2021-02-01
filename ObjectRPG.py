@@ -7,15 +7,13 @@ from os import path
 
 
 #TODO
-#Update movement system so that each direction sets a tuple.
-#Position 1 is the areaset name and position 2 is the position ID.
-#Update save and load system to save and load areaset.
 #Implement NPCs in areas that the player can interact with by talking to, buying and selling from, etc.
 #Implement object system. NPCs are one object type. Others can be switches, levers, or other things to interact with.
 #Objects will have a name, command to interact, array of states, each state will have conditions to move to the next state.
+#States will be new instances of the event and the array of states will contain the names of these Events so that they can accessed.
+#The content of the states can then be swapped with the original Event to effectively change the state.
 #Conditions can be updating a switch or variable or combination of 2 inputs.
 #Conditions are met via interacting using commands such as: give, talk, examine, etc.
-#Implement moving between areasets using "up" and "down" commands.
 #Implement spell system allowing multiple spells to choose from.
 #Learned spells will be in an inventory on the character.
 #Each character will have a list of spells that they will learn at specific levels. This might be defined on the class.
@@ -33,6 +31,7 @@ global areas
 areas = {}
 global width
 global height
+global filename
 
 currentparty = []
 battlepartymembers = []
@@ -481,20 +480,39 @@ class Area:
     def __init__(self, name):
         self.name = name
         self.idno = 0
-        self.north = 0
-        self.south = 0
-        self.east = 0
-        self.west = 0
-        self.up = 0
-        self.down = 0
+        self.north = ["", 0]
+        self.south = ["", 0]
+        self.east = ["", 0]
+        self.west = ["", 0]
+        self.up = ["", 0]
+        self.down = ["", 0]
         self.items = []
         self.sign = ""
         self.initswitch = False
         self.initmessage = ""
         self.message = ""
         self.enemy = False
-        self.switches = [False]
-        self.variables = [0]
+        self.switches = {}
+        self.variables = {}
+        self.events = []
+
+class Event:
+    def __init__(self, name):
+        self.name = name
+        self.type = ""
+        self.commands = []
+        self.description = ""
+        self.preconditions = []
+        self.states = []
+        self.nextstatecond = []
+        self.event = {}
+
+class Precondition:
+    def __init__(self, name):
+        self.name = name
+        self.type = ""
+        self.detail = ""
+        self.value = 0
 
 class Items:
     def __init__(self, name):
@@ -516,6 +534,7 @@ class Spell:
         self.targettype = "enemy"
         self.target = "single"
 
+#Initialize spells
 fireball = Spell("Fireball")
 fireball.type = "fire"
 fireball.mpcost = 5
@@ -544,7 +563,7 @@ heal.description = "Heals 50 HP for one party member."
 heal.message = "sent a wave of healing energy"
 heal.basepower = 50
 
-
+#setup default area
 width = 1
 height = 1
 x = 1
@@ -578,12 +597,13 @@ def main():
 def start():
     os.system("cls")
     print("Which game will you load? \nPlease enter the filename of the areaset you would like to load.")
+    global filename
     filename = input(">")
     global areas
     global width
     global height
     areas, width, height, position = loadareaset(filename)
-    print("Hello, what is your name?")
+    print("\nHello, what is your name?")
     name = input(">")
     print("Greetings %s!" % name)
     option = input("Press enter to continue.")
@@ -622,6 +642,8 @@ def newchar():
         else:
             newplayer = Player(newplayer, "Nothing")
         currentparty.append(newplayer)
+        if "potion" in newplayer.items:
+            PlayerIG.potions += 1
         start1()
 
 def readintro(areaset):
@@ -646,17 +668,17 @@ def showstatus(areaset, currentposition):
         pass
     else:
         print("{}".format(areas[position].message))
-    if areas[position].north != 0:
+    if areas[position].north[1] != 0:
         print("There is a path leading north.")
-    if areas[position].south != 0:
+    if areas[position].south[1] != 0:
         print("There is a path leading south.")
-    if areas[position].east != 0:
+    if areas[position].east[1] != 0:
         print("There is a path leading east.")
-    if areas[position].west != 0:
+    if areas[position].west[1] != 0:
         print("There is a path leading west.")
-    if areas[position].up != 0:
+    if areas[position].up[1] != 0:
         print("There is a path leading up.")
-    if areas[position].down != 0:
+    if areas[position].down[1] != 0:
         print("There is a path leading down.")
     if not areas[position].sign:
         pass
@@ -667,6 +689,23 @@ def showstatus(areaset, currentposition):
     else:
         for item in areas[position].items:
             print("You see a {} lying on the ground.".format(item))
+    if not areas[position].events:
+        pass
+    else:
+        for event in areas[position].events:
+            print(event.description)
+            commands = []
+            for command in event.commands:
+                commands.append(command)
+            x = {"" if len(event.commands) == 1 else ", "}
+            #print("Interact using the following command(s): " + "".join("{0}{1}".format(command, {"" if len(event.commands) == 1 else ", "}) for command in event.commands))
+            print("Interact using the following command(s): " + "".join("{0}".format(commands)))
+            #print("Interact using the following command(s): " + "".join("{0}".format(command + ", " if len(commands) > 1 else command) for x in range(len(commands) - 1)))
+            #if len(commands) == 1:
+            #    print("Interact using the following command(s): " + "".join("{}".format(command)))
+            #print("Interact using the following command(s): " + "".join("{}".format(command + ", ") for command in range(len(commands) - 1)) + "".join("{}".format(commands[-1])))
+            #print("[" + "".join("{}".format("-") for i in range(before)) + "*" + "".join("{}".format("-") for k in range(after)) + "]")
+            #print("[" + "".join("{}".format("-") for k in range(width)) + "]")
     if areas[position].enemy == True:
         print("You sense danger nearby...")
         #Set up chance that battle starts immediately with ambush attack, else enter battle via command
@@ -697,6 +736,10 @@ def start1():
         displaymp(char)
         print("Level: %i" % char.level)
         print("Class: %s" % char.charclass)
+    commands = []
+    for event in currentarea.events:
+        for command in event.commands:
+            commands.append(command)
     print("********")
     print("1.) Fight")
     print("2.) Store")
@@ -754,9 +797,12 @@ def start1():
                 if len(currentparty) == 1:
                     print("{} took the {}.".format(currentparty[0].name,areas[PlayerIG.currentposition].items[0]))
                     currentparty[0].items.append(areas[PlayerIG.currentposition].items[0])
+                    if areas[PlayerIG.currentposition].items[0] == "potion":
+                        PlayerIG.potions += 1
                     areas[PlayerIG.currentposition].items.remove(areas[PlayerIG.currentposition].items[0])
+                    start1()
                 else:
-                    print("Give to who?")
+                    print("Give {} to who?".format(areas[PlayerIG.currentposition].items[0]))
                     while True:
                         for char in currentparty:
                             print(char.name)
@@ -765,7 +811,9 @@ def start1():
                             if option == char.name:
                                 print("{} took the {}.".format(char.name,areas[PlayerIG.currentposition].items[0]))
                                 char.items.append(areas[PlayerIG.currentposition].items[0])
-                                areas[PlayerIG.currentposition].items[0]
+                                if areas[PlayerIG.currentposition].items[0] == "potion":
+                                    PlayerIG.potions += 1
+                                areas[PlayerIG.currentposition].items.remove(areas[PlayerIG.currentposition].items[0])
                                 start1()
                         print("Please specify a valid party member.")
             else:
@@ -779,10 +827,12 @@ def start1():
                             if len(currentparty) == 1:
                                 print("{} took the {}.".format(currentparty[0].name,item))
                                 currentparty[0].items.append(item)
+                                if item == "potion":
+                                    PlayerIG.potions += 1
                                 areas[PlayerIG.currentposition].items.remove(item)
                                 start1()
                             else:
-                                print("Give to who?")
+                                print("Give {} to who?".format(item))
                                 while True:
                                     for char in currentparty:
                                         print(char.name)
@@ -791,92 +841,167 @@ def start1():
                                         if option == char.name:
                                             print("{} took the {}.".format(char.name, item))
                                             char.items.append(item)
+                                            if item == "potion":
+                                                PlayerIG.potions += 1
                                             areas[PlayerIG.currentposition].items.remove(item)
                                             start1()
                                     print("Please specify a valid party member.")
                     break
             start1()
+    elif option in commands:
+        tempeventlist = []
+        print("{} for which?".format(option))
+        for event in currentarea.events:
+            for command in event.commands:
+                if option == command:
+                    print(event.name)
+                    tempeventlist.append(event)
+        choice = input(">")
+        for event in tempeventlist:
+            if choice == event.name:
+                runevent(option, event)
+                break
+        start1()
     elif "go" in option and "east" not in option and "west" not in option and "north" not in option and "south" not in option:
         print("Go where?")
         start1()
     elif "go" and "east" in option:
-        if currentarea.east:
-            if currentarea.east < 0:
-                print("That door is locked.")
-                for char in currentparty:
-                    if "key" in char.items:
-                        while True:
-                            print("Use key?")
-                            print("1.) Yes.")
-                            print("2.) No.")
-                            option = input(">")
-                            if option == "2":
-                                break
-                            elif option == "1":
-                                print("{} used a key to open the door.".format(char.name))
-                                currentarea.east *= -1
-                                PlayerIG.currentposition = currentarea.east
-                                break
-                            else:
-                                print("Please enter a valid selection.")
+            if currentarea.east:
+                if currentarea.east[0] != areas[0].name:
+                    #save current areaset to retain object permanence
+                    previousareaset = "temp" + areas[0].name
+                    saveareaset(previousareaset, areas, width, height, PlayerIG.currentposition)
+                    #load next area
+                    nextareaset = "temp" + areas[PlayerIG.currentposition].east[0]
+                    if path.exists(nextareaset + ".pkl"):
+                        print("Temp exists!")
+                        #load saved instance of areaset
+                        areas, width, height, PlayerIG.currentposition = loadareaset(nextareaset)
+                    else:
+                        print("Temp doesn't exist...")
+                        #load original areaset
+                        areas, width, height, PlayerIG.currentposition = loadareaset(areas[PlayerIG.currentposition].east[0])
+                elif currentarea.east[1] < 0:
+                    print("That door is locked.")
+                    for char in currentparty:
+                        if "key" in char.items:
+                            while True:
+                                print("Use key?")
+                                print("1.) Yes.")
+                                print("2.) No.")
+                                option = input(">")
+                                if option == "2":
+                                    break
+                                elif option == "1":
+                                    print("{} used a key to open the door.".format(char.name))
+                                    currentarea.east[1] *= -1
+                                    char.items.remove("key")
+                                    PlayerIG.currentposition = currentarea.east[1]
+                                    break
+                                else:
+                                    print("Please enter a valid selection.")
+                else:
+                    PlayerIG.currentposition = currentarea.east[1]
             else:
-                PlayerIG.currentposition = currentarea.east
-        else:
-            print("There is no path in that direction.")
-        start1()
+                print("There is no path in that direction.")
+            start1()
     elif "go" and "west" in option:
-        if currentarea.west:
-            if currentarea.west < 0:
-                print("That door is locked.")
-                for char in currentparty:
-                    if "key" in char.items:
-                        while True:
-                            print("Use key?")
-                            print("1.) Yes.")
-                            print("2.) No.")
-                            option = input(">")
-                            if option == "2":
-                                break
-                            elif option == "1":
-                                print("{} used a key to open the door.".format(char.name))
-                                currentarea.east *= -1
-                                PlayerIG.currentposition = currentarea.west
-                                break
-                            else:
-                                print("Please enter a valid selection.")
+            if currentarea.west:
+                if currentarea.west[0] != areas[0].name:
+                    #save current areaset to retain object permanence
+                    previousareaset = "temp" + areas[0].name
+                    saveareaset(previousareaset, areas, width, height, PlayerIG.currentposition)
+                    #load next area
+                    nextareaset = "temp" + areas[PlayerIG.currentposition].west[0]
+                    if path.exists(nextareaset + ".pkl"):
+                        print("Temp exists!")
+                        #load saved instance of areaset
+                        areas, width, height, PlayerIG.currentposition = loadareaset(nextareaset)
+                    else:
+                        print("Temp doesn't exist...")
+                        #load original areaset
+                        areas, width, height, PlayerIG.currentposition = loadareaset(areas[PlayerIG.currentposition].west[0])
+                elif currentarea.west[1] < 0:
+                    print("That door is locked.")
+                    for char in currentparty:
+                        if "key" in char.items:
+                            while True:
+                                print("Use key?")
+                                print("1.) Yes.")
+                                print("2.) No.")
+                                option = input(">")
+                                if option == "2":
+                                    break
+                                elif option == "1":
+                                    print("{} used a key to open the door.".format(char.name))
+                                    currentarea.west[1] *= -1
+                                    char.items.remove("key")
+                                    PlayerIG.currentposition = currentarea.west[1]
+                                    break
+                                else:
+                                    print("Please enter a valid selection.")
+                else:
+                    PlayerIG.currentposition = currentarea.west[1]
             else:
-                PlayerIG.currentposition = currentarea.west
-        else:
-            print("There is no path in that direction.")
-        start1()
+                print("There is no path in that direction.")
+            start1()
     elif "go" and "north" in option:
-        if currentarea.north:
-            if currentarea.north < 0:
-                print("That door is locked.")
-                for char in currentparty:
-                    if "key" in char.items:
-                        while True:
-                            print("Use key?")
-                            print("1.) Yes.")
-                            print("2.) No.")
-                            option = input(">")
-                            if option == "2":
-                                break
-                            elif option == "1":
-                                print("{} used a key to open the door.".format(char.name))
-                                currentarea.east *= -1
-                                PlayerIG.currentposition = currentarea.north
-                                break
-                            else:
-                                print("Please enter a valid selection.")
+            if currentarea.north:
+                if currentarea.north[0] != areas[0].name:
+                    #save current areaset to retain object permanence
+                    previousareaset = "temp" + areas[0].name
+                    saveareaset(previousareaset, areas, width, height, PlayerIG.currentposition)
+                    #load next area
+                    nextareaset = "temp" + areas[PlayerIG.currentposition].north[0]
+                    if path.exists(nextareaset + ".pkl"):
+                        print("Temp exists!")
+                        #load saved instance of areaset
+                        areas, width, height, PlayerIG.currentposition = loadareaset(nextareaset)
+                    else:
+                        print("Temp doesn't exist...")
+                        #load original areaset
+                        areas, width, height, PlayerIG.currentposition = loadareaset(areas[PlayerIG.currentposition].north[0])
+                elif currentarea.north[1] < 0:
+                    print("That door is locked.")
+                    for char in currentparty:
+                        if "key" in char.items:
+                            while True:
+                                print("Use key?")
+                                print("1.) Yes.")
+                                print("2.) No.")
+                                option = input(">")
+                                if option == "2":
+                                    break
+                                elif option == "1":
+                                    print("{} used a key to open the door.".format(char.name))
+                                    currentarea.north[1] *= -1
+                                    char.items.remove("key")
+                                    PlayerIG.currentposition = currentarea.north[1]
+                                    break
+                                else:
+                                    print("Please enter a valid selection.")
+                else:
+                    PlayerIG.currentposition = currentarea.north[1]
             else:
-                PlayerIG.currentposition = currentarea.north
-        else:
-            print("There is no path in that direction.")
-        start1()
+                print("There is no path in that direction.")
+            start1()
     elif "go" and "south" in option:
         if currentarea.south:
-            if currentarea.south < 0:
+            if currentarea.south[0] != areas[0].name:
+                #save current areaset to retain object permanence
+                previousareaset = "temp" + areas[0].name
+                saveareaset(previousareaset, areas, width, height, PlayerIG.currentposition)
+                #load next area
+                nextareaset = "temp" + areas[PlayerIG.currentposition].south[0]
+                if path.exists(nextareaset + ".pkl"):
+                    print("Temp exists!")
+                    #load saved instance of areaset
+                    areas, width, height, PlayerIG.currentposition = loadareaset(nextareaset)
+                else:
+                    print("Temp doesn't exist...")
+                    #load original areaset
+                    areas, width, height, PlayerIG.currentposition = loadareaset(areas[PlayerIG.currentposition].south[0])
+            elif currentarea.south[1] < 0:
                 print("That door is locked.")
                 for char in currentparty:
                     if "key" in char.items:
@@ -889,24 +1014,25 @@ def start1():
                                 break
                             elif option == "1":
                                 print("{} used a key to open the door.".format(char.name))
-                                currentarea.east *= -1
-                                PlayerIG.currentposition = currentarea.south
+                                currentarea.south[1] *= -1
+                                char.items.remove("key")
+                                PlayerIG.currentposition = currentarea.south[1]
                                 break
                             else:
                                 print("Please enter a valid selection.")
             else:
-                PlayerIG.currentposition = currentarea.south
+                PlayerIG.currentposition = currentarea.south[1]
         else:
             print("There is no path in that direction.")
         start1()
     elif "go" and "up" in option:
         if currentarea.up:
-            if currentarea.up is not int:
+            if currentarea.up[0] != areas[0].name:
                 #save current areaset to retain object permanence
                 previousareaset = "temp" + areas[0].name
                 saveareaset(previousareaset, areas, width, height, PlayerIG.currentposition)
                 #load next area
-                nextareaset = "temp" + areas[PlayerIG.currentposition].up
+                nextareaset = "temp" + areas[PlayerIG.currentposition].up[0]
                 if path.exists(nextareaset + ".pkl"):
                     print("Temp exists!")
                     #load saved instance of areaset
@@ -914,18 +1040,18 @@ def start1():
                 else:
                     print("Temp doesn't exist...")
                     #load original areaset
-                    areas, width, height, PlayerIG.currentposition = loadareaset(areas[PlayerIG.currentposition].up)
+                    areas, width, height, PlayerIG.currentposition = loadareaset(areas[PlayerIG.currentposition].up[0])
         else:
             print("There is no path in that direction.")
         start1()
     elif "go" and "down" in option:
         if currentarea.down:
-            if currentarea.down is not int:
+            if currentarea.down[0] != areas[0].name:
                 #save current areaset to retain object permanence
                 previousareaset = "temp" + areas[0].name
                 saveareaset(previousareaset, areas, width, height, PlayerIG.currentposition)
                 #load next area
-                nextareaset = "temp" + areas[PlayerIG.currentposition].down
+                nextareaset = "temp" + areas[PlayerIG.currentposition].down[0]
                 if path.exists(nextareaset + ".pkl"):
                     print("Temp exists!")
                     #load saved instance of areaset
@@ -933,12 +1059,73 @@ def start1():
                 else:
                     print("Temp doesn't exist...")
                     #load original areaset
-                    areas, width, height, PlayerIG.currentposition = loadareaset(areas[PlayerIG.currentposition].down)
+                    areas, width, height, PlayerIG.currentposition = loadareaset(areas[PlayerIG.currentposition].down[0])
         else:
             print("There is no path in that direction.")
         start1()
     else:
         start1()
+
+def runevent(command, event):
+    print("{} to {}".format(command, event.name))
+    #if command == "text"
+    #if event.event[
+    success = True
+    print(event.event[command])
+    for actiongroup in event.event[command]:
+        for action in actiongroup:
+            if success == True:
+                if action == "success":
+                    if actiongroup[4] == False:
+                        success = False
+                    else:
+                        success = True
+                if action == "text":
+                    print(actiongroup[1])
+                    option = input("Please press enter to continue.")
+                elif action == "itemgive":
+                    item = actiongroup[1]
+                    message = actiongroup[2]
+                    print(message)
+                    choice = input(">")
+                    if choice == item:
+                        itemlist = []
+                        for char in currentparty:
+                            if item in char.items:
+                                itemlist.append(item)
+                        if itemlist:
+                            for char in currentparty:
+                                if item in char.items:
+                                    char.items.remove(item)
+                                    if item == "potion":
+                                        PlayerIG.potions -= 1
+                                    print("{} gave {} to {}.".format(char.name, item, event.name))
+                                    option = input("Please press enter to continue.")
+                                    break
+                        else:
+                            print("You do not have {}.".format(item))
+                            option = input("Please press enter to continue.")
+                            success = False
+                            break
+                    else:
+                        print("{} does not accept {}.".format(event.name, choice))
+                        success = False
+                        break
+                elif action == "itemget":
+                    item = actiongroup[1]
+                    PlayerIG.items.append(item)
+                elif action == "goldexchange":
+                    PlayerIG.gold += actiongroup[1]
+                    if actiongroup[1] > 0:
+                        print("You received {} gold!".format(actiongroup[1]))
+                    else:
+                        print("You lost {} gold!".format(actiongroup[1]))
+                else:
+                    pass
+            else:
+                break
+    
+    
 
 def status():
     print("********")
@@ -1007,9 +1194,11 @@ def showmap(areawidth, areaheight, currentposition):
 
 def savegame():
     os.system("cls")
+    global filename
     with open("savefile", "wb") as f:
         pickle.dump(PlayerIG, f)
         pickle.dump(currentparty, f)
+        pickle.dump(filename, f)
         print("********")
         print("\nGame has been saved!\n")
         print("********")
@@ -1019,11 +1208,20 @@ def savegame():
 def loadgame():
     if os.path.exists("savefile") == True:
         os.system("cls")
+        global filename
         with open("Savefile", "rb") as f:
             global PlayerIG
             global currentparty
             PlayerIG = pickle.load(f)
             currentparty = pickle.load(f)
+            filename = pickle.load(f)
+        #print("Please enter the filename of the areaset you would like to load.")
+        #filename = input(">")
+        global areas
+        global width
+        global height
+        #position here is not used because the area loads the start position but the game data save contains the saved location
+        areas, width, height, position = loadareaset(filename)
         print("********")
         print("Save has been loaded...")
         print("********")
@@ -1463,7 +1661,6 @@ def fight():
             #print("Battle Target: %s" % BattleActionA.target)
             #print(battlepartymembers[BattleActionA.target].name)
             #pause = input(" ")
-            #battletargetqueue.append(enemytarget)
 
             battleactionqueue.append(BattleActionA)
             
@@ -1518,7 +1715,6 @@ def fight():
                 playeraction = "physical"
                 #battleactionqueue.append(playeraction)
                 target = getenemytarget()
-                #battletargetqueue.append(target)
                 
                 
                 #print("Battle Class: %s" % BattleActionA.name)
@@ -1538,9 +1734,7 @@ def fight():
             elif option == 2:
                 playeraction = "magic"
 
-                #battleactionqueue.append(playeraction)
                 target = getenemytarget()
-                #battletargetqueue.append(target)
 
                 BattleActionA = BattleActionClass(char.name)
                 #print("Battle Class: %s" % BattleActionA.name)
@@ -1559,9 +1753,9 @@ def fight():
                 #print(enemyparty[target].name)
             elif option == 3:
                 playeraction = "drink"
-                #battleactionqueue.append(playeraction)
+                
                 target = getplayertarget()
-                #battletargetqueue.append(target)
+
 
                 BattleActionA = BattleActionClass(char.name)
                 #print("Battle Class: %s" % BattleActionA.name)
@@ -1580,9 +1774,8 @@ def fight():
                 #print(currentparty[target].name)
             elif option == 4:
                 playeraction = "run"
-                #battleactionqueue.append(playeraction)
+
                 target = 0
-                #battletargetqueue.append(target)
 
                 BattleActionA = BattleActionClass(char.name)
                 #print("Battle Class: %s" % BattleActionA.name)
@@ -1610,8 +1803,6 @@ def runbattleactionqueue():
     #    print(battlemembers[n].name)
     #for n in range(len(battleactionqueue)):
     #    print(battleactionqueue[n])
-    #for n in range(len(battletargetqueue)):
-    #    print(battletargetqueue[n])
     #option = input(" ")
 
     for n in range(len(battleactionqueue)):
@@ -1622,8 +1813,6 @@ def runbattleactionqueue():
         if battlemembers[i].chartype == "enemy":
             print(battlemembers[i].name + "'s turn!")
             enemy = battlemembers[i]
-            #choice = battleactionqueue[i]
-            #enemytarget = battletargetqueue[i]
             choice = battleactionqueue[i].action
             #print("Enemy choice baq: %s" % choice1)
             enemytarget = battleactionqueue[i].target
@@ -1639,8 +1828,6 @@ def runbattleactionqueue():
         elif battlemembers[i].chartype == "player":
             print(battlemembers[i].name + "'s turn!")
             player = battlemembers[i]
-            #action = battleactionqueue[i]
-            #playertarget = battletargetqueue[i]
             action = battleactionqueue[i].action
             #print("Player action baq: %s" % action1)
             playertarget = battleactionqueue[i].target
@@ -1684,7 +1871,6 @@ def runbattleactionqueue():
         option = input(" ")
         #else:
             #print("Done\n")
-    #battletargetqueue.clear()
     battleactionqueue.clear()
     fight()
             
@@ -2178,6 +2364,7 @@ def storebuy():
     elif option in potions:
         if PlayerIG.gold >= potions[option]:
             os.system("cls")
+            player = purchaseforwho(option)
             PlayerIG.gold -= potions[option]
             PlayerIG.potions += 1
             player.items.append("potion")

@@ -1,15 +1,14 @@
 import string, random, pickle, sys
 
 #TODO
-#Update movement system so that each direction sets a tuple.
-#Position 1 is the areaset name and position 2 is the position ID.
 #Implement gametest system where ObjectRPG.py can be called to run on the current areaset to quickly test it.
 #This will bypass the main function by running a special function within ObjectRPG yet to be implemented.
 #This funciton will create a base character and load the current areaset for testing.
 
 areas = {}
 enemies = ["Goblin", "Zombie", "Fast Zombie", "Imp", "Magic Goblin"]
-items = ["potion", "key"]
+items = ["potion", "key", "shiny ruby"]
+events = []
 global currentposition
 currentposition = 1
 global width
@@ -19,20 +18,39 @@ class Area:
     def __init__(self, name):
         self.name = name
         self.idno = 0
-        self.north = 0
-        self.south = 0
-        self.east = 0
-        self.west = 0
-        self.up = 0
-        self.down = 0
+        self.north = ["", 0]
+        self.south = ["", 0]
+        self.east = ["", 0]
+        self.west = ["", 0]
+        self.up = ["", 0]
+        self.down = ["", 0]
         self.items = []
         self.sign = ""
         self.initswitch = True
         self.initmessage = ""
         self.message = ""
         self.enemy = False
-        self.switches = [False]
-        self.variables = [0]
+        self.switches = {}
+        self.variables = {}
+        self.events = []
+
+class Event:
+    def __init__(self, name):
+        self.name = name
+        self.type = ""
+        self.commands = []
+        self.description = ""
+        self.preconditions = []
+        self.states = []
+        self.nextstatecond = []
+        self.event = {}
+
+class Precondition:
+    def __init__(self, name):
+        self.name = name
+        self.type = ""
+        self.detail = ""
+        self.value = 0
 
 def createnewareaset():
     global areas
@@ -72,23 +90,31 @@ def printarea(position):
     area = areas[currentposition]
     print("Name: {0}".format(area.name))
     print("ID: {0}".format(area.idno))
-    if area.north != 0:
-        print("North: {0}".format(area.north))
-    if area.south != 0:
-        print("South: {0}".format(area.south))
-    if area.east != 0:
-        print("East: {0}".format(area.east))
-    if area.west != 0:
-        print("West: {0}".format(area.west))
-    if area.up != 0:
-        print("Up: {0}".format(area.up))
-    if area.down != 0:
-        print("Down: {0}".format(area.down))
+    if area.north[1] != 0:
+        print("North: {0}: {1}".format(area.north[0], area.north[1]))
+    if area.south[1] != 0:
+        print("South: {0}: {1}".format(area.south[0], area.south[1]))
+    if area.east[1] != 0:
+        print("East: {0}: {1}".format(area.east[0], area.east[1]))
+    if area.west[1] != 0:
+        print("West: {0}: {1}".format(area.west[0], area.west[1]))
+    if area.up[1] != 0:
+        print("Up: {0}: {1}".format(area.up[0], area.up[1]))
+    if area.down[1] != 0:
+        print("Down: {0}: {1}".format(area.down[0], area.down[1]))
     print("Items: {0}".format(area.items))
     print("Sign: {0}".format(area.sign))
     print("Init message: {0}".format(area.initmessage))
     print("Message: {0}".format(area.message))
     print("Enemy: {0}".format(area.enemy))
+    print("Switches: {0}".format(area.switches))
+    print("Variables: {0}".format(area.variables))
+    if area.events:
+        eventnames = []
+        for event in area.events:
+            eventnames.append(event.name)        
+        #    print("Events: {0}".format(event.name))
+        print("Events: " + "".join("{}".format(eventnames)))
 
 
                        
@@ -119,7 +145,8 @@ def createarea():
                     break
                 except:
                     print("Please enter an integer.\n")
-            NewArea.north = option
+            NewArea.north[0] = areaname
+            NewArea.north[1] = option
             print("ID entered: %i" % NewArea.north)
         print("South?")
         option = input("y or n>\n>")
@@ -134,7 +161,8 @@ def createarea():
                     break
                 except:
                     print("Please enter an integer.\n")
-            NewArea.south = option
+            NewArea.south[0] = areaname
+            NewArea.south[1] = option
             print("ID entered: %i" % NewArea.south)
         print("East?")
         option = input("y or n>\n>")
@@ -149,7 +177,8 @@ def createarea():
                     break
                 except:
                     print("Please enter an integer.\n")
-            NewArea.east = option
+            NewArea.east[0] = areaname
+            NewArea.east[1] = option
             print("ID entered: %i" % NewArea.east)
         print("West?")
         option = input("y or n>\n>")
@@ -164,7 +193,8 @@ def createarea():
                     break
                 except:
                     print("Please enter an integer.\n")
-            NewArea.west = option
+            NewArea.west[0] = areaname
+            NewArea.west[1] = option
             print("ID entered: %i" % NewArea.west)
     message = input("Initial message?\n>")
     NewArea.initmessage = message
@@ -304,6 +334,7 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
         print("10.) Edit Initial Message")
         print("11.) Edit Message")
         print("12.) Edit Enemy Flag")
+        print("13.) Edit Events")
         print("b.) Back")
         choice = input(">")
         if choice == "1":
@@ -311,23 +342,49 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
             name = input("Please enter a new name for this area.\n>")
             areas[position].name = name
         elif choice == "2":
-            if area.north == 0:
+            if area.north[1] == 0:
                 print("There is no destination set for North. Set it? (y or n?)")
                 option = input(">")
                 if option == "y":
                     while True:
-                        print("Please enter a new destination.\n (negative numbers indicate a locked door)")
+                        print("Is new destination in current area or new area?")
+                        print("1.) Current Area")
+                        print("2.) New Area")
                         choice = input(">")
-                        if choice == "0":
-                            areas[position].north = 0
+                        if choice == "1":
+                            while True:
+                                print("Please enter a new destination.\n (negative numbers indicate a locked door)")
+                                choice = input(">")
+                                if choice == "0":
+                                    areas[position].north[0] = areas[0].name
+                                    areas[position].north[1] = 0
+                                    break
+                                else:
+                                    try:
+                                        choice = int(choice)
+                                        areas[position].north[0] = areas[0].name
+                                        areas[position].north[1] = choice
+                                        break
+                                    except:
+                                        print("Please enter a valid integer.")
+                            break
+                        elif choice == "2":
+                            print("Please enter name of areaset to set as destination.")
+                            choice = input(">")
+                            areas[position].north[0] = choice
+                            while True:
+                                print("Current position: {}".format(areas[position].idno))
+                                print("Please enter destination position.")
+                                option = input(">")
+                                try:
+                                    option = int(option)
+                                    areas[position].north[1] = option
+                                    break
+                                except:
+                                    print("Please enter a valid integer.")
                             break
                         else:
-                            try:
-                                choice = int(choice)
-                                areas[position].north = choice
-                                break
-                            except:
-                                print("Please enter a valid integer.")
+                            print("Please enter a valid selection.")
                 elif option == "n":
                     pass
                 else:
@@ -335,36 +392,88 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
             else:
                 while True:
                     print("Current North Destination: {}".format(area.north))
-                    print("Please enter a new destination. Set it to 0 to remove the destination.\n (negative numbers indicate a locked door)")
+                    print("Is new destination in current area or new area?")
+                    print("1.) Current Area")
+                    print("2.) New Area")
                     choice = input(">")
-                    if choice == "0":
-                        areas[position].north = 0
+                    if choice == "1":
+                        while True:
+                            print("Please enter a new destination. Set it to 0 to remove the destination.\n (negative numbers indicate a locked door)")
+                            choice = input(">")
+                            if choice == "0":
+                                areas[position].north[0] = areas[0].name
+                                areas[position].north[1] = 0
+                                break
+                            else:
+                                try:
+                                    choice = int(choice)
+                                    areas[position].north[0] = areas[0].name
+                                    areas[position].north[1] = choice
+                                    break
+                                except:
+                                    print("Please enter a valid integer.")
+                        break
+                    elif choice == "2":
+                        print("Please enter name of areaset to set as destination.")
+                        choice = input(">")
+                        areas[position].north[0] = choice
+                        while True:
+                            print("Current position: {}".format(areas[position].idno))
+                            print("Please enter destination position.")
+                            option = input(">")
+                            try:
+                                option = int(option)
+                                areas[position].north[1] = option
+                                break
+                            except:
+                                print("Please enter a valid integer.")
                         break
                     else:
-                        try:
-                            choice = int(choice)
-                            areas[position].north = choice
-                            break
-                        except:
-                            print("Please enter a valid integer.")
+                        print("Please enter a valid selection.")
         elif choice == "3":
-            if area.south == 0:
+            if area.south[1] == 0:
                 print("There is no destination set for South. Set it? (y or n?)")
                 option = input(">")
                 if option == "y":
                     while True:
-                        print("Please enter a new destination.\n (negative numbers indicate a locked door)")
+                        print("Is new destination in current area or new area?")
+                        print("1.) Current Area")
+                        print("2.) New Area")
                         choice = input(">")
-                        if choice == "0":
-                            areas[position].south = 0
+                        if choice == "1":
+                            while True:
+                                print("Please enter a new destination.\n (negative numbers indicate a locked door)")
+                                choice = input(">")
+                                if choice == "0":
+                                    areas[position].south[0] = areas[0].name
+                                    areas[position].south[1] = 0
+                                    break
+                                else:
+                                    try:
+                                        choice = int(choice)
+                                        areas[position].south[0] = areas[0].name
+                                        areas[position].south[1] = choice
+                                        break
+                                    except:
+                                        print("Please enter a valid integer.")
+                            break
+                        elif choice == "2":
+                            print("Please enter name of areaset to set as destination.")
+                            choice = input(">")
+                            areas[position].south[0] = choice
+                            while True:
+                                print("Current position: {}".format(areas[position].idno))
+                                print("Please enter destination position.")
+                                option = input(">")
+                                try:
+                                    option = int(option)
+                                    areas[position].south[1] = option
+                                    break
+                                except:
+                                    print("Please enter a valid integer.")
                             break
                         else:
-                            try:
-                                choice = int(choice)
-                                areas[position].south = choice
-                                break
-                            except:
-                                print("Please enter a valid integer.")
+                            print("Please enter a valid selection.")
                 elif option == "n":
                     pass
                 else:
@@ -372,36 +481,88 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
             else:
                 while True:
                     print("Current South Destination: {}".format(area.south))
-                    print("Please enter a new destination. Set it to 0 to remove the destination.\n (negative numbers indicate a locked door)")
+                    print("Is new destination in current area or new area?")
+                    print("1.) Current Area")
+                    print("2.) New Area")
                     choice = input(">")
-                    if choice == "0":
-                        areas[position].south = 0
+                    if choice == "1":
+                        while True:
+                            print("Please enter a new destination. Set it to 0 to remove the destination.\n (negative numbers indicate a locked door)")
+                            choice = input(">")
+                            if choice == "0":
+                                areas[position].south[0] = areas[0].name
+                                areas[position].south[1] = 0
+                                break
+                            else:
+                                try:
+                                    choice = int(choice)
+                                    areas[position].south[0] = areas[0].name
+                                    areas[position].south[1] = choice
+                                    break
+                                except:
+                                    print("Please enter a valid integer.")
+                        break
+                    elif choice == "2":
+                        print("Please enter name of areaset to set as destination.")
+                        choice = input(">")
+                        areas[position].south[0] = choice
+                        while True:
+                            print("Current position: {}".format(areas[position].idno))
+                            print("Please enter destination position.")
+                            option = input(">")
+                            try:
+                                option = int(option)
+                                areas[position].south[1] = option
+                                break
+                            except:
+                                print("Please enter a valid integer.")
                         break
                     else:
-                        try:
-                            choice = int(choice)
-                            areas[position].south = choice
-                            break
-                        except:
-                            print("Please enter a valid integer.")
+                        print("Please enter a valid selection.")
         elif choice == "4":
-            if area.east == 0:
+            if area.east[1] == 0:
                 print("There is no destination set for East. Set it? (y or n?)")
                 option = input(">")
                 if option == "y":
                     while True:
-                        print("Please enter a new destination.\n (negative numbers indicate a locked door)")
+                        print("Is new destination in current area or new area?")
+                        print("1.) Current Area")
+                        print("2.) New Area")
                         choice = input(">")
-                        if choice == "0":
-                            areas[position].east = 0
+                        if choice == "1":
+                            while True:
+                                print("Please enter a new destination.\n (negative numbers indicate a locked door)")
+                                choice = input(">")
+                                if choice == "0":
+                                    areas[position].east[0] = areas[0].name
+                                    areas[position].east[1] = 0
+                                    break
+                                else:
+                                    try:
+                                        choice = int(choice)
+                                        areas[position].east[0] = areas[0].name
+                                        areas[position].east[1] = choice
+                                        break
+                                    except:
+                                        print("Please enter a valid integer.")
+                            break
+                        elif choice == "2":
+                            print("Please enter name of areaset to set as destination.")
+                            choice = input(">")
+                            areas[position].east[0] = choice
+                            while True:
+                                print("Current position: {}".format(areas[position].idno))
+                                print("Please enter destination position.")
+                                option = input(">")
+                                try:
+                                    option = int(option)
+                                    areas[position].east[1] = option
+                                    break
+                                except:
+                                    print("Please enter a valid integer.")
                             break
                         else:
-                            try:
-                                choice = int(choice)
-                                areas[position].east = choice
-                                break
-                            except:
-                                print("Please enter a valid integer.")
+                            print("Please enter a valid selection.")
                 elif option == "n":
                     pass
                 else:
@@ -409,36 +570,88 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
             else:
                 while True:
                     print("Current East Destination: {}".format(area.east))
-                    print("Please enter a new destination. Set it to 0 to remove the destination.\n (negative numbers indicate a locked door)")
+                    print("Is new destination in current area or new area?")
+                    print("1.) Current Area")
+                    print("2.) New Area")
                     choice = input(">")
-                    if choice == "0":
-                        areas[position].east = 0
+                    if choice == "1":
+                        while True:
+                            print("Please enter a new destination. Set it to 0 to remove the destination.\n (negative numbers indicate a locked door)")
+                            choice = input(">")
+                            if choice == "0":
+                                areas[position].east[0] = areas[0].name
+                                areas[position].east[1] = 0
+                                break
+                            else:
+                                try:
+                                    choice = int(choice)
+                                    areas[position].east[0] = areas[0].name
+                                    areas[position].east[1] = choice
+                                    break
+                                except:
+                                    print("Please enter a valid integer.")
+                        break
+                    elif choice == "2":
+                        print("Please enter name of areaset to set as destination.")
+                        choice = input(">")
+                        areas[position].east[0] = choice
+                        while True:
+                            print("Current position: {}".format(areas[position].idno))
+                            print("Please enter destination position.")
+                            option = input(">")
+                            try:
+                                option = int(option)
+                                areas[position].east[1] = option
+                                break
+                            except:
+                                print("Please enter a valid integer.")
                         break
                     else:
-                        try:
-                            choice = int(choice)
-                            areas[position].east = choice
-                            break
-                        except:
-                            print("Please enter a valid integer.")
+                        print("Please enter a valid selection.")
         elif choice == "5":
-            if area.west == 0:
+            if area.west[1] == 0:
                 print("There is no destination set for West. Set it? (y or n?)")
                 option = input(">")
                 if option == "y":
                     while True:
-                        print("Please enter a new destination.\n (negative numbers indicate a locked door)")
+                        print("Is new destination in current area or new area?")
+                        print("1.) Current Area")
+                        print("2.) New Area")
                         choice = input(">")
-                        if choice == "0":
-                            areas[position].west = 0
+                        if choice == "1":
+                            while True:
+                                print("Please enter a new destination.\n (negative numbers indicate a locked door)")
+                                choice = input(">")
+                                if choice == "0":
+                                    areas[position].west[0] = areas[0].name
+                                    areas[position].west[1] = 0
+                                    break
+                                else:
+                                    try:
+                                        choice = int(choice)
+                                        areas[position].west[0] = areas[0].name
+                                        areas[position].west[1] = choice
+                                        break
+                                    except:
+                                        print("Please enter a valid integer.")
+                            break
+                        elif choice == "2":
+                            print("Please enter name of areaset to set as destination.")
+                            choice = input(">")
+                            areas[position].west[0] = choice
+                            while True:
+                                print("Current position: {}".format(areas[position].idno))
+                                print("Please enter destination position.")
+                                option = input(">")
+                                try:
+                                    option = int(option)
+                                    areas[position].west[1] = option
+                                    break
+                                except:
+                                    print("Please enter a valid integer.")
                             break
                         else:
-                            try:
-                                choice = int(choice)
-                                areas[position].west = choice
-                                break
-                            except:
-                                print("Please enter a valid integer.")
+                            print("Please enter a valid selection.")
                 elif option == "n":
                     pass
                 else:
@@ -446,20 +659,46 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
             else:
                 while True:
                     print("Current West Destination: {}".format(area.west))
-                    print("Please enter a new destination. Set it to 0 to remove the destination.\n (negative numbers indicate a locked door)")
+                    print("Is new destination in current area or new area?")
+                    print("1.) Current Area")
+                    print("2.) New Area")
                     choice = input(">")
-                    if choice == "0":
-                        areas[position].west = 0
+                    if choice == "1":
+                        while True:
+                            print("Please enter a new destination. Set it to 0 to remove the destination.\n (negative numbers indicate a locked door)")
+                            choice = input(">")
+                            if choice == "0":
+                                areas[position].west[0] = areas[0].name
+                                areas[position].west[1] = 0
+                                break
+                            else:
+                                try:
+                                    choice = int(choice)
+                                    areas[position].west[0] = areas[0].name
+                                    areas[position].west[1] = choice
+                                    break
+                                except:
+                                    print("Please enter a valid integer.")
+                        break
+                    elif choice == "2":
+                        print("Please enter name of areaset to set as destination.")
+                        choice = input(">")
+                        areas[position].west[0] = choice
+                        while True:
+                            print("Current position: {}".format(areas[position].idno))
+                            print("Please enter destination position.")
+                            option = input(">")
+                            try:
+                                option = int(option)
+                                areas[position].west[1] = option
+                                break
+                            except:
+                                print("Please enter a valid integer.")
                         break
                     else:
-                        try:
-                            choice = int(choice)
-                            areas[position].west = choice
-                            break
-                        except:
-                            print("Please enter a valid integer.")
+                        print("Please enter a valid selection.")
         elif choice == "6":
-            if area.up == 0:
+            if area.up[1] == 0:
                 print("There is no destination set for Up. Set it? (y or n?)")
                 option = input(">")
                 if option == "y":
@@ -473,12 +712,14 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
                                 print("Please enter a new destination.\n (negative numbers indicate a locked door)")
                                 choice = input(">")
                                 if choice == "0":
-                                    areas[position].up = 0
+                                    areas[position].up[0] = areas[0].name
+                                    areas[position].up[1] = 0
                                     break
                                 else:
                                     try:
                                         choice = int(choice)
-                                        areas[position].up = choice
+                                        areas[position].up[0] = areas[0].name
+                                        areas[position].up[1] = choice
                                         break
                                     except:
                                         print("Please enter a valid integer.")
@@ -486,7 +727,17 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
                         elif choice == "2":
                             print("Please enter name of areaset to set as destination.")
                             choice = input(">")
-                            areas[position].up = choice
+                            areas[position].up[0] = choice
+                            while True:
+                                print("Current position: {}".format(areas[position].idno))
+                                print("Please enter destination position.")
+                                option = input(">")
+                                try:
+                                    option = int(option)
+                                    areas[position].up[1] = option
+                                    break
+                                except:
+                                    print("Please enter a valid integer.")
                             break
                         else:
                             print("Please enter a valid selection.")
@@ -506,12 +757,14 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
                             print("Please enter a new destination. Set it to 0 to remove the destination.\n (negative numbers indicate a locked door)")
                             choice = input(">")
                             if choice == "0":
-                                areas[position].up = 0
+                                areas[position].up[0] = areas[0].name
+                                areas[position].up[1] = 0
                                 break
                             else:
                                 try:
                                     choice = int(choice)
-                                    areas[position].up = choice
+                                    areas[position].up[0] = areas[0].name
+                                    areas[position].up[1] = choice
                                     break
                                 except:
                                     print("Please enter a valid integer.")
@@ -519,12 +772,22 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
                     elif choice == "2":
                         print("Please enter name of areaset to set as destination.")
                         choice = input(">")
-                        areas[position].up = choice
+                        areas[position].up[0] = choice
+                        while True:
+                            print("Current position: {}".format(areas[position].idno))
+                            print("Please enter destination position.")
+                            option = input(">")
+                            try:
+                                option = int(option)
+                                areas[position].up[1] = option
+                                break
+                            except:
+                                print("Please enter a valid integer.")
                         break
                     else:
                         print("Please enter a valid selection.")
         elif choice == "7":
-            if area.down == 0:
+            if area.down[1] == 0:
                 print("There is no destination set for Down. Set it? (y or n?)")
                 option = input(">")
                 if option == "y":
@@ -538,12 +801,14 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
                                 print("Please enter a new destination.\n (negative numbers indicate a locked door)")
                                 choice = input(">")
                                 if choice == "0":
-                                    areas[position].down = 0
+                                    areas[position].down[0] = areas[0].name
+                                    areas[position].down[1] = 0
                                     break
                                 else:
                                     try:
                                         choice = int(choice)
-                                        areas[position].down = choice
+                                        areas[position].down[0] = areas[0].name
+                                        areas[position].down[1] = choice
                                         break
                                     except:
                                         print("Please enter a valid integer.")
@@ -551,7 +816,17 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
                         elif choice == "2":
                             print("Please enter name of areaset to set as destination.")
                             choice = input(">")
-                            areas[position].down = choice
+                            areas[position].down[0] = choice
+                            while True:
+                                print("Current position: {}".format(areas[position].idno))
+                                print("Please enter destination position.")
+                                option = input(">")
+                                try:
+                                    option = int(option)
+                                    areas[position].down[1] = option
+                                    break
+                                except:
+                                    print("Please enter a valid integer.")
                             break
                         else:
                             print("Please enter a valid selection.")
@@ -571,12 +846,14 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
                             print("Please enter a new destination. Set it to 0 to remove the destination.\n (negative numbers indicate a locked door)")
                             choice = input(">")
                             if choice == "0":
-                                areas[position].down = 0
+                                areas[position].down[0] = areas[0].name
+                                areas[position].down[1] = 0
                                 break
                             else:
                                 try:
                                     choice = int(choice)
-                                    areas[position].down = choice
+                                    areas[position].down[0] = areas[0].name
+                                    areas[position].down[1] = choice
                                     break
                                 except:
                                     print("Please enter a valid integer.")
@@ -584,7 +861,17 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
                     elif choice == "2":
                         print("Please enter name of areaset to set as destination.")
                         choice = input(">")
-                        areas[position].down = choice
+                        areas[position].down[0] = choice
+                        while True:
+                            print("Current position: {}".format(areas[position].idno))
+                            print("Please enter destination position.")
+                            option = input(">")
+                            try:
+                                option = int(option)
+                                areas[position].down[1] = option
+                                break
+                            except:
+                                print("Please enter a valid integer.")
                         break
                     else:
                         print("Please enter a valid selection.")
@@ -612,8 +899,261 @@ def editcurrentarea(currentarea, currentposition, areawidth, areaheight):
                 areas[position].enemy = False
             else:
                 print("Please enter 'y' or 'n'.")
+        elif choice == "13":
+            editevents(area, position, width, height)
         elif choice == "b" or choice == "back":
             #runareaset(areas, int(width), int(height), int(position))
+            break
+        else:
+            print("Please enter a valid selection.")
+
+def addaction(playeraction, currentarea):
+    action = playeraction
+    area = currentarea
+    while True:
+        print("Please choose what will happen when the {} command is used on this event.".format(action))
+        print("1.) Respond with text only")
+        print("2.) Item exchange")
+        print("3.) Change party gold")
+        print("4.) Set Switch")
+        print("5.) Set Variable")
+        print("6.) Set Choice")
+        choice = input(">")
+        if choice == "1":
+            print("Please enter text response.")
+            text = input(">")
+            return ["text", text]
+        elif choice == "2":
+            while True:
+                print("Give item or get item?")
+                print("1.) Give item")
+                print("2.) Get item")
+                choice = input(">")
+                if choice == "1":
+                    itemexchange = "itemgive"
+                    print("Please enter the item to give from the player to the event.")
+                    itemname = input(">")
+                    print("Item: {}".format(itemname))
+                    print("Please enter a message how to refer to this event with the command.")
+                    print("Example: If command is called 'give' this text might be 'give to who?")
+                    message = input(">")
+                    break
+                elif choice == "2":
+                    itemexchange = "itemget"
+                    print("Please enter the item to get from the event.")
+                    itemname = input(">")
+                    print("Item: {}".format(itemname))
+                    message = ""
+                    break
+                else:
+                    print("Please enter a valid selection.")
+            return itemexchange, itemname, message
+        elif choice == "3":
+            while True:
+                print("Please enter the amnount of gold to add. \nUse a negative number to subtract gold.")
+                changegold = input(">")
+                try:
+                    changegold = int(changegold)
+                    break
+                except:
+                    print("Please enter an integer value.")
+            return "goldexchange", changegold
+        elif choice == "4":
+            while True:
+                print("Set global switch or local event switch?")
+                print("1.) Global switch")
+                print("2.) Local event switch")
+                option = input(">")
+                if option == "1":
+                    print("Which switch?")
+                    if areas[0].switches:
+                        count = 1
+                        print("{}.) Create new switch".format(count))
+                        for switch in areas[0].switches:
+                            count += 1
+                            print("{}.) {}".format(count, switch))
+                        select = input(">")
+                        if select == "1":
+                            print("Please enter a name for the new switch.")
+                            name = input(">")
+                            print("Please set the switch to True or False.")
+                            print("1.) True")
+                            print("2.) False")
+                            value = input(">")
+                            if value == "1":
+                                pass
+                            elif value == "2":
+                                pass
+                            
+                            
+                elif option == "2":
+                    break
+                else:
+                    print("Please enter a valid selection.")
+        elif choice == "5":
+            while True:
+                print("Set global variable or local event variable?")
+                print("1.) Global variable")
+                print("2.) Local event variable")
+                option = input(">")
+                if option == "1":
+                    pass
+                elif option == "2":
+                    pass
+                else:
+                    print("Please enter a valid selection.")
+        elif choice == "6":
+            pass
+        else:
+            print("Please enter a valid selection.")
+        
+        
+
+def editevents(currentarea, currentposition, areawidth, areaheight):
+    area = currentarea
+    position = currentposition
+    width = areawidth
+    height = areaheight
+    while True:
+        if not areas[position].events:
+            print("There are no events here yet.")
+        else:
+            print("Current events in this area:")
+            for event in areas[position].events:
+                print(event.name)
+        print("What do you want to do?")
+        print("1.) Add new event")
+        print("2.) Edit event")
+        print("3.) Remove event")
+        print("b.) Back")
+        choice = input(">")
+        if choice == "1":
+            print("Current events in this area:")
+            for event in areas[position].events:
+                print(event.name)
+            print("Please enter name of new event to add.")
+            eventname = input(">")
+            newevent = Event(eventname)
+            print("What type of event is this?")
+            print("NPC, lever, button, object, etc.")
+            eventtype = input(">")
+            newevent.type = eventtype
+            while True:
+                print("What command can be used to interact with this event?")
+                command = input(">")
+                if command == "go" or command == "east" or command == "west" or command == "north" or command == "south" or command == "up" or command == "south":
+                    print("{} is a restricted command. Please enter a new command.".format(command))
+                else:
+                    newevent.commands.append(command)
+                    i = len(newevent.commands)
+                    #add actions
+                    newevent.event[command] = []
+                    while True:
+                        action = addaction(command, area)
+                        newevent.event[command].append(action)
+                        print("Added {}".format(action))
+                        try:
+                            while True:
+                                print("Add additional action? (y or n)")
+                                option = input(">")
+                                if option == "y" or option == "n":
+                                    break
+                                else:
+                                    print("Please enter 'y' or 'n'.")
+                            if option == "n":
+                                raise
+                        except:
+                            break
+                    try:
+                        while True:
+                            print("Add additional command? (y or n)")
+                            option = input(">")
+                            if option == "y" or option == "n":
+                                break
+                            else:
+                                print("Please enter 'y' or 'n'.")
+                        if option == "n":
+                            raise
+                    except:
+                        break
+            print("Please enter a description of this event that will appear when you enter the area.")
+            description = input(">")
+            newevent.description = description
+            while True:
+                while True:
+                    print("Please enter preconditions for this event to appear.")
+                    print("1.) None")
+                    print("2.) Item held")
+                    print("3.) Switch condition")
+                    print("4.) Variable condition")
+                    preconditions = input(">")
+                    if preconditions == "1":
+                        option = "n"
+                        newevent.preconditions = "none"
+                        break
+                    elif preconditions == "2":
+                        while True:
+                            print("Which item should be held?")
+                            for item in items:
+                                print(item)
+                            itemheld = input(">")
+                            if itemheld in items:
+                                newprecondition = Precondition(itemheld)
+                                newprecondition.type = "item"
+                                newprecondition.detail = itemheld
+                                break
+                            else:
+                                print("Please enter a valid item.")
+                        newevent.preconditions.append(newprecondition)
+                        break
+                    elif preconditions == "3":
+                        pass
+                    elif preconditions == "4":
+                        pass
+                    else:
+                        print("Please enter a valid selection.")
+                try:
+                    while option != "n":
+                        print("Add additional preconditions? (y or n)")
+                        option = input(">")
+                        if option == "y" or option == "n":
+                            break
+                        else:
+                            print("Please enter 'y' or 'n'.")
+                    if option == "n":
+                        raise
+                except:
+                    break
+            #add the event to the area
+            areas[position].events.append(newevent)
+            print("{} added.".format(newevent.name))
+        elif choice == "2":
+            print("Current events in this area:")
+            for event in areas[position].events:
+                print(event.name)
+            print("Please enter name of new event to edit.")
+            eventname = input(">")
+            if eventname == event.name:
+                pass
+            else:
+                print("{} is not a valid event in this area.".format(eventname))
+        elif choice == "3":
+            print("Current events in this area:")
+            eventlist = []
+            for event in areas[position].events:
+                print(event.name)
+                eventlist.append(event.name)
+            print("Please enter name of new event to remove.")
+            eventname = input(">")
+            if eventname in eventlist:
+                print("Removed {}".format(eventname))
+                for event in areas[position].events:
+                    if event.name == eventname:
+                        areas[position].events.remove(event)
+                        break
+            else:
+                print("{} is not a valid event in this area.".format(eventname))
+        elif choice == "b" or "back":
             break
         else:
             print("Please enter a valid selection.")
@@ -750,15 +1290,15 @@ def runareaset(areaset, areawidth, areaheight, currentposition):
                 print("No areas to move to yet!\n")
             else:
                 if currentposition in areas:
-                    if areas[currentposition].north != 0:
+                    if areas[currentposition].north[1] != 0:
                         try:
                             area = areas[currentposition]
-                            print("North: {}".format(area.north))
-                            if area.north < 0:
+                            print("North: {}".format(area.north[1]))
+                            if area.north[1] < 0:
                                 print("Moving through locked door.")
-                                currentposition = -1 * areas[currentposition].north
+                                currentposition = -1 * areas[currentposition].north[1]
                             else:
-                                currentposition = areas[currentposition].north
+                                currentposition = areas[currentposition].north[1]
                             position = currentposition
                         except:
                             print("That area doesn't exist yet!")
@@ -771,15 +1311,15 @@ def runareaset(areaset, areawidth, areaheight, currentposition):
                 print("No areas to move to yet!\n")
             else:
                 if currentposition in areas:
-                    if areas[currentposition].south != 0:
+                    if areas[currentposition].south[1] != 0:
                         try:
                             area = areas[currentposition]
-                            print("South: {}".format(area.south))
-                            if area.south < 0:
+                            print("South: {}".format(area.south[1]))
+                            if area.south[1] < 0:
                                 print("Moving through locked door.")
-                                currentposition = -1 * areas[currentposition].south
+                                currentposition = -1 * areas[currentposition].south[1]
                             else:
-                                currentposition = areas[currentposition].south
+                                currentposition = areas[currentposition].south[1]
                             position = currentposition
                         except:
                             print("That area doesn't exist yet!")
@@ -792,15 +1332,15 @@ def runareaset(areaset, areawidth, areaheight, currentposition):
                 print("No areas to move to yet!\n")
             else:
                 if currentposition in areas:
-                    if areas[currentposition].east != 0:
+                    if areas[currentposition].east[1] != 0:
                         try:
                             area = areas[currentposition]
-                            print("East: {}".format(area.east))
-                            if area.east < 0:
+                            print("East: {}".format(area.east[1]))
+                            if area.east[1] < 0:
                                 print("Moving through locked door.")
-                                currentposition = -1 * areas[currentposition].east
+                                currentposition = -1 * areas[currentposition].east[1]
                             else:
-                                currentposition = areas[currentposition].east
+                                currentposition = areas[currentposition].east[1]
                             position = currentposition
                         except:
                             print("That area doesn't exist yet!")
@@ -813,15 +1353,15 @@ def runareaset(areaset, areawidth, areaheight, currentposition):
                 print("No areas to move to yet!\n")
             else:
                 if currentposition in areas:
-                    if areas[currentposition].west != 0:
+                    if areas[currentposition].west[1] != 0:
                         try:
                             area = areas[currentposition]
-                            print("West: {}".format(area.west + 1))
-                            if area.west < 0:
+                            print("West: {}".format(area.west[1]))
+                            if area.west[1] < 0:
                                 print("Moving through locked door.")
-                                currentposition = -1 * areas[currentposition].west
+                                currentposition = -1 * areas[currentposition].west[1]
                             else:
-                                currentposition = areas[currentposition].west
+                                currentposition = areas[currentposition].west[1]
                             position = currentposition
                         except:
                             print("That area doesn't exist yet!")
@@ -834,11 +1374,11 @@ def runareaset(areaset, areawidth, areaheight, currentposition):
                 print("No areas to move to yet!\n")
             else:
                 if currentposition in areas:
-                    if areas[currentposition].up != 0:
+                    if areas[currentposition].up[1] != 0:
                         try:
                             area = areas[currentposition]
-                            print("Up: {}".format(area.up + 1))
-                            currentposition = areas[currentposition].up
+                            print("Up: {}".format(area.up[1]))
+                            currentposition = areas[currentposition].up[1]
                             position = currentposition
                         except:
                             print("That area doesn't exist yet!")
@@ -851,11 +1391,11 @@ def runareaset(areaset, areawidth, areaheight, currentposition):
                 print("No areas to move to yet!\n")
             else:
                 if currentposition in areas:
-                    if areas[currentposition].down != 0:
+                    if areas[currentposition].down[1] != 0:
                         try:
                             area = areas[currentposition]
-                            print("Down: {}".format(area.down + 1))
-                            currentposition = areas[currentposition].down
+                            print("Down: {}".format(area.down[1]))
+                            currentposition = areas[currentposition].down[1]
                             position = currentposition
                         except:
                             print("That area doesn't exist yet!")
