@@ -1933,7 +1933,7 @@ def runevent(command, event, area, areaset):
                                 currentparty.remove(char)
                                 print("{} removed from the party.".format(charname))
                 elif action == "combat":
-                    print(actiongroup)
+                    #print(actiongroup)
                     enemylist = actiongroup[1]
                     scriptedbattle = actiongroup[2]
                     runfrombattle = actiongroup[3]
@@ -3347,6 +3347,9 @@ def win():
                     if precondition == "win":
                         #print("win")
                         runevent(precondition, script, PlayerIG.currentposition, areas)
+        GameDataIG.scriptedbattles[2] = False
+        GameDataIG.scriptedbattles[1] = True
+        GameDataIG.scriptedbattles[0] = False
         start1()
     else:
         #fight()
@@ -3369,6 +3372,8 @@ def dead():
                         #print("loss")
                         runevent(precondition, script, PlayerIG.currentposition, areas)
             GameDataIG.scriptedbattles[2] = False
+            GameDataIG.scriptedbattles[1] = True
+            GameDataIG.scriptedbattles[0] = False
             start1()
         else:
             print("You died!")
